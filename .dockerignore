@@ -1,9 +1,11 @@
 # Should be identical to .gitignore
 .env
+.npmrc
 node_modules
 .idea
 data
 stacks
+stacks-data
 tmp
 /private
 

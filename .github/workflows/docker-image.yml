@@ -16,6 +16,8 @@ env:
 jobs:
   quality:
     name: Application quality gate
+    # Disabled on one-zero-eight/dockge; use prod-image.yml instead.
+    if: github.repository_owner != 'one-zero-eight'
     runs-on: ubuntu-24.04
 
     steps:
@@ -47,6 +49,7 @@ jobs:
 
   build-and-push:
     name: Build and publish multi-platform image
+    if: github.repository_owner != 'one-zero-eight'
     needs: quality
     runs-on: ubuntu-24.04
     timeout-minutes: 120

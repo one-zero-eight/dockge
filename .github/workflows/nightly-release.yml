@@ -10,6 +10,8 @@ permissions: {}
 
 jobs:
   release-nightly:
+    # Disabled on one-zero-eight/dockge; use prod-image.yml instead.
+    if: github.repository_owner != 'one-zero-eight'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     permissions:

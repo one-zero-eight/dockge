@@ -1,0 +1,150 @@
+name: Build and push production image
+
+on:
+  push:
+    branches:
+      - prod
+  workflow_dispatch:
+
+concurrency:
+  group: prod-image-${{ github.repository }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/one-zero-eight/dockge
+  EXPECTED_REPOSITORY: one-zero-eight/dockge
+
+jobs:
+  quality:
+    name: Application quality gate
+    if: github.repository == 'one-zero-eight/dockge'
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-fund
+
+      - name: Validate and build application
+        run: |
+          npm run lint
+          npm run check-ts
+          npx tsx --test backend/*.test.ts
+          npm run build:frontend
+
+      - name: Upload frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist/
+          if-no-files-found: error
+          retention-days: 1
+
+  build-and-push:
+    name: Build and publish multi-platform image
+    if: github.repository == 'one-zero-eight/dockge'
+    needs: quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Guard repository and branch
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REPOSITORY}" != "${EXPECTED_REPOSITORY}" ]]; then
+            echo "Refusing to publish from ${GITHUB_REPOSITORY}."
+            exit 1
+          fi
+          if [[ "${GITHUB_REF}" != "refs/heads/prod" ]]; then
+            echo "Production images must be published from the prod branch."
+            exit 1
+          fi
+
+      - name: Download frontend bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend-dist
+
+      - name: Set build metadata
+        id: metadata
+        shell: bash
+        run: |
+          FULL_SHA="$(git rev-parse HEAD)"
+          echo "full_sha=${FULL_SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "date=$(date --utc '+%Y-%m-%dT%H:%M:%SZ')" >> "$GITHUB_OUTPUT"
+          echo "immutable_tag=prod-${FULL_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          target: release
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.metadata.outputs.immutable_tag }}
+            ${{ env.IMAGE_NAME }}:prod
+          labels: |
+            org.opencontainers.image.title=Dockge
+            org.opencontainers.image.description=one-zero-eight Dockge production image
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ steps.metadata.outputs.immutable_tag }}
+            org.opencontainers.image.created=${{ steps.metadata.outputs.date }}
+            org.opencontainers.image.licenses=MIT
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Record published digest
+        shell: bash
+        run: |
+          DIGEST="${{ steps.build.outputs.digest }}"
+          if [[ -z "${DIGEST}" ]]; then
+            echo "Build did not return a digest."
+            exit 1
+          fi
+          {
+            echo "## Production image"
+            echo ""
+            echo "- Tag: \`${{ env.IMAGE_NAME }}:${{ steps.metadata.outputs.immutable_tag }}\`"
+            echo "- Movable tag: \`${{ env.IMAGE_NAME }}:prod\`"
+            echo "- Digest pin: \`${{ env.IMAGE_NAME }}@${DIGEST}\`"
+            echo "- Commit: \`${{ steps.metadata.outputs.full_sha }}\`"
+            echo ""
+            echo "Deploy/rollback with the digest pin. SHA tags alone are not an immutability guarantee."
+          } >> "$GITHUB_STEP_SUMMARY"
