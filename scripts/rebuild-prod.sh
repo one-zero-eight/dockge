@@ -94,17 +94,30 @@ fi
 
 # Refuse if prod is checked out in another worktree.
 if [[ -n "$PREV_PROD_SHA" ]]; then
+  abs_root="$(cd "$ROOT" && pwd)"
+  current_wt=""
+  current_branch=""
   while IFS= read -r line; do
-    wt_path="${line%% *}"
-    if [[ "$line" == *" [${PROD_BRANCH}]"* ]] || [[ "$line" == *" [${PROD_BRANCH] "* ]]; then
-      abs_root="$(cd "$ROOT" && pwd)"
-      abs_wt="$(cd "$wt_path" && pwd)"
-      if [[ "$abs_wt" != "$abs_root" ]]; then
-        echo "Refusing to update ${PROD_BRANCH}: checked out in worktree ${wt_path}" >&2
-        exit 1
-      fi
-    fi
-  done < <(git worktree list)
+    case "$line" in
+      worktree\ *)
+        current_wt="${line#worktree }"
+        ;;
+      branch\ refs/heads/*)
+        current_branch="${line#branch refs/heads/}"
+        if [[ "$current_branch" == "$PROD_BRANCH" ]]; then
+          abs_wt="$(cd "$current_wt" && pwd)"
+          if [[ "$abs_wt" != "$abs_root" ]]; then
+            echo "Refusing to update ${PROD_BRANCH}: checked out in worktree ${current_wt}" >&2
+            exit 1
+          fi
+        fi
+        ;;
+      "")
+        current_wt=""
+        current_branch=""
+        ;;
+    esac
+  done < <(git worktree list --porcelain)
 fi
 
 CANDIDATE_DIR="$(mktemp -d "${TMPDIR:-/tmp}/dockge-prod-candidate.XXXXXX")"
