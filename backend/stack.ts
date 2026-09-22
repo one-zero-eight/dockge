@@ -202,6 +202,18 @@ export class Stack {
             fs.lchownSync(dir, uid, gid);
             fs.chownSync(path.join(dir, this._composeFileName), uid, gid);
         }
+
+        // Write or overwrite the .env
+        // Port of louislam/dockge#979 (9872ce7dc512c09fbf5772855d8a6dc70a167699).
+        const envPath = path.join(dir, ".env");
+        if (await fileExists(envPath) || this.composeENV.trim() !== "") {
+            await fsAsync.writeFile(envPath, this.composeENV);
+            if (process.env.PUID && process.env.PGID) {
+                const uid = Number(process.env.PUID);
+                const gid = Number(process.env.PGID);
+                fs.chownSync(envPath, uid, gid);
+            }
+        }
     }
 
     async deploy(socket : DockgeSocket) : Promise<number> {
