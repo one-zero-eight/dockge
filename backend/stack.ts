@@ -111,11 +111,18 @@ export class Stack {
         return this._status;
     }
 
-    validate() {
-        // Check name, allows [a-z][0-9] _ - only
-        if (!this.name.match(/^[a-z0-9_-]+$/)) {
+    /**
+     * Allow-list stack names so path.join(stacksDir, name) cannot escape stacksDir.
+     * Port of louislam/dockge#997 (76d1785008d924a9f82074096067d6c259b2c0aa).
+     */
+    static validateName(name: unknown) {
+        if (typeof name !== "string" || !name.match(/^[a-z0-9_-]+$/)) {
             throw new ValidationError("Stack name can only contain [a-z][0-9] _ - only");
         }
+    }
+
+    validate() {
+        Stack.validateName(this.name);
 
         // Check YAML format
         yaml.parse(this.composeYAML);
@@ -373,6 +380,7 @@ export class Stack {
     }
 
     static async getStack(server: DockgeServer, stackName: string, skipFSOperations = false) : Promise<Stack> {
+        this.validateName(stackName);
         let dir = path.join(server.stacksDir, stackName);
 
         if (!skipFSOperations) {
