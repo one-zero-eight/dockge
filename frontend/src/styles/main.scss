@@ -27,8 +27,19 @@ textarea.form-control {
     border-radius: 19px;
 }
 
+* {
+    scrollbar-width: thin;
+    scrollbar-color: $primary transparent;
+}
+
 ::-webkit-scrollbar {
-    width: 10px;
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 .bg-maintenance {
@@ -85,7 +96,7 @@ optgroup {
 
 // Scrollbar
 ::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: $primary;
     border-radius: 20px;
 }
 
@@ -273,10 +284,6 @@ optgroup {
 
     mark, .mark {
         background-color: #b6ad86;
-    }
-
-    &::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb {
-        background: $dark-border-color;
     }
 
     .shadow-box {
@@ -469,17 +476,13 @@ optgroup {
  */
 
 // page-change
-.slide-fade-enter-active {
-    transition: all 0.2s $easing-in;
-}
-
+.slide-fade-enter-active,
 .slide-fade-leave-active {
-    transition: all 0.2s $easing-in;
+    transition: opacity 0.2s $easing-in;
 }
 
 .slide-fade-enter-from,
 .slide-fade-leave-to {
-    transform: translateY(50px);
     opacity: 0;
 }
 

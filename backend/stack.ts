@@ -114,7 +114,7 @@ export class Stack {
     validate() {
         // Check name, allows [a-z][0-9] _ - only
         if (!this.name.match(/^[a-z0-9_-]+$/)) {
-            throw new ValidationError("Stack name can only contain [a-z][0-9] _ - only");
+            throw new ValidationError("Project name can only contain [a-z][0-9] _ - only");
         }
 
         // Check YAML format
@@ -183,14 +183,14 @@ export class Stack {
         // Check if the name is used if isAdd
         if (isAdd) {
             if (await fileExists(dir)) {
-                throw new ValidationError("Stack name already exists");
+                throw new ValidationError("Project name already exists");
             }
 
             // Create the stack folder
             await fsAsync.mkdir(dir);
         } else {
             if (!await fileExists(dir)) {
-                throw new ValidationError("Stack not found");
+                throw new ValidationError("Project not found");
             }
         }
 
@@ -385,7 +385,7 @@ export class Stack {
                     return stack;
                 } else {
                     // Really not found
-                    throw new ValidationError("Stack not found");
+                    throw new ValidationError("Project not found");
                 }
             }
         } else {
@@ -606,7 +606,7 @@ export class Stack {
                 return container as Record<string, unknown>;
             }
         }
-        throw new ValidationError(`Container ${containerName} does not belong to stack ${this.name}.`);
+        throw new ValidationError(`Container ${containerName} does not belong to project ${this.name}.`);
     }
 
     /**

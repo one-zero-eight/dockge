@@ -66,6 +66,9 @@ import {
     faBars,
     faArrowLeft,
     faPaste,
+    faLayerGroup,
+    faCubes,
+    faCube,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -133,6 +136,9 @@ library.add(
     faBars,
     faArrowLeft,
     faPaste,
+    faLayerGroup,
+    faCubes,
+    faCube,
 );
 
 export { FontAwesomeIcon };

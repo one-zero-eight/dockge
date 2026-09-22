@@ -1,56 +1,56 @@
 <template>
-    <div class="shadow-box big-padding mb-3 container">
-        <div class="row">
-            <div class="col-5">
-                <h4>{{ name }}</h4>
-                <div class="image mb-2">
-                    <span class="tag">{{ imageDisplay }}</span>
-                </div>
-                <div v-if="!isEditMode">
-                    <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+    <div :id="'service-' + encodeURIComponent(name)" class="shadow-box big-padding mb-3 container">
+        <div class="title-row">
+            <h4 class="title-text">
+                <router-link v-if="!isEditMode && serviceStatus.length > 0" class="title-link" :to="containerDetailsRoute(serviceStatus[0])">
+                    <span>{{ name }}</span>
+                </router-link>
+                <span v-else>{{ name }}</span>
+                <span class="entity-label">{{ $t("service") }}</span>
+            </h4>
+            <div v-if="!isEditMode" class="title-actions btn-group btn-group-sm" role="group">
+                <router-link
+                    v-if="status === 'running' || status === 'healthy'"
+                    class="btn btn-sm btn-normal"
+                    :to="terminalRouteLink"
+                >
+                    <font-awesome-icon icon="terminal" /><span>Bash</span>
+                </router-link>
+                <button
+                    v-if="serviceCount > 1 && status !== 'running' && status !== 'healthy'"
+                    class="btn btn-sm btn-primary"
+                    :disabled="processing"
+                    @click="startService"
+                >
+                    <font-awesome-icon icon="play" /><span>{{ $t("startStack") }}</span>
+                </button>
+                <button
+                    v-if="serviceCount > 1 && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                    class="btn btn-sm btn-normal"
+                    :disabled="processing"
+                    @click="restartService"
+                >
+                    <font-awesome-icon icon="rotate" /><span>{{ $t("restartStack") }}</span>
+                </button>
+                <button
+                    v-if="serviceCount > 1 && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
+                    class="btn btn-sm btn-normal"
+                    :disabled="processing"
+                    @click="stopService"
+                >
+                    <font-awesome-icon icon="stop" /><span>{{ $t("stopStack") }}</span>
+                </button>
+            </div>
+        </div>
 
-                    <a v-for="port in (envsubstService.ports || [])" :key="port" :href="parsePort(port).url" target="_blank">
-                        <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
-                    </a>
-                </div>
-            </div>
-            <div class="col-7">
-                <div class="function">
-                    <div class="btn-group me-2" role="group">
-                        <router-link v-if="!isEditMode && (status === 'running' || status === 'healthy')" class="btn btn-normal" :to="terminalRouteLink" disabled="">
-                            <font-awesome-icon icon="terminal" />
-                            Bash
-                        </router-link>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && status !== 'running' && status !== 'healthy'"
-                            class="btn btn-primary"
-                            :disabled="processing"
-                            @click="startService"
-                        >
-                            <font-awesome-icon icon="play" class="me-1" />
-                            {{ $t("startStack") }}
-                        </button>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
-                            class="btn btn-normal"
-                            :disabled="processing"
-                            @click="restartService"
-                        >
-                            <font-awesome-icon icon="rotate" class="me-1" />
-                            {{ $t("restartStack") }}
-                        </button>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
-                            class="btn btn-normal"
-                            :disabled="processing"
-                            @click="stopService"
-                        >
-                            <font-awesome-icon icon="stop" class="me-1" />
-                            {{ $t("stopStack") }}
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div class="image mb-2">
+            <span class="tag" :title="imageDisplay">{{ imageDisplay }}</span>
+        </div>
+        <div v-if="!isEditMode" class="service-meta">
+            <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+            <a v-for="port in (envsubstService.ports || [])" :key="port" :href="parsePort(port).url" target="_blank">
+                <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
+            </a>
         </div>
 
         <div v-if="isEditMode" class="mt-2">
@@ -66,25 +66,23 @@
         </div>
         <div v-else-if="serviceStatus.length > 0" class="container-instances mt-3">
             <div v-for="instance in serviceStatus" :key="instance.name" class="instance-row">
-                <div class="instance-summary">
-                    <div class="instance-name">{{ instance.name }}</div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                        <span class="badge" :class="instanceStatusClass(instance)">{{ instance.status }}</span>
-                        <span v-if="dockerStats[instance.name]" class="stats">
-                            {{ $t("CPU") }}: {{ dockerStats[instance.name].CPUPerc }}
-                        </span>
-                        <span v-if="dockerStats[instance.name]" class="stats">
-                            {{ $t("memoryAbbreviated") }}: {{ dockerStats[instance.name].MemUsage }}
-                        </span>
+                <div class="title-row">
+                    <div class="instance-name title-text">
+                        <span class="instance-branch" aria-hidden="true">↳</span>
+                        <router-link class="title-link" :to="containerDetailsRoute(instance)">
+                            <span>{{ instance.name }}</span>
+                        </router-link>
+                        <span class="entity-label">{{ $tc("container", 1) }}</span>
                     </div>
                 </div>
-                <div class="instance-actions btn-group" role="group">
-                    <router-link class="btn btn-sm btn-normal" :to="containerDetailsRoute(instance)">
-                        <font-awesome-icon icon="info-circle" class="me-1" /> {{ $t("details") }}
-                    </router-link>
-                    <router-link class="btn btn-sm btn-normal" :to="containerDetailsRoute(instance, 'logs')">
-                        <font-awesome-icon icon="list" class="me-1" /> {{ $t("logs") }}
-                    </router-link>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                    <span class="badge" :class="instanceStatusClass(instance)">{{ instance.status }}</span>
+                    <span v-if="dockerStats[instance.name]" class="stats">
+                        {{ $t("CPU") }}: {{ dockerStats[instance.name].CPUPerc }}
+                    </span>
+                    <span v-if="dockerStats[instance.name]" class="stats">
+                        {{ $t("memoryAbbreviated") }}: {{ dockerStats[instance.name].MemUsage }}
+                    </span>
                 </div>
             </div>
         </div>
@@ -317,14 +315,25 @@ export default defineComponent({
                 return "N/A";
             }
             return this.serviceStatus[0].status;
-        }
+        },
+    },
+    watch: {
+        "$route.hash"() {
+            this.scrollToService();
+        },
     },
     mounted() {
+        this.scrollToService();
         if (this.first) {
             //this.showConfig = true;
         }
     },
     methods: {
+        scrollToService() {
+            if (this.$route.hash === "#service-" + encodeURIComponent(this.name)) {
+                this.$nextTick(() => this.$el.scrollIntoView({ block: "nearest" }));
+            }
+        },
         parsePort(port) {
             if (this.stack.endpoint) {
                 return parseDockerPort(port, this.stack.primaryHostname);
@@ -376,21 +385,83 @@ export default defineComponent({
 @import "../styles/vars";
 
 .container {
+    .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .title-text {
+        margin: 0;
+        min-width: 0;
+        flex: 1 1 auto;
+    }
+
+    h4.title-text {
+        font-size: 1.25rem;
+    }
+
+    .title-link {
+        color: inherit;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+        border-radius: 0.2rem;
+        transition: color 0.15s ease;
+
+        &:hover,
+        &:focus-visible {
+            color: $primary;
+            text-decoration: none;
+        }
+
+        &:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 3px;
+        }
+    }
+
+    .title-actions {
+        flex: 0 0 auto;
+        flex-wrap: nowrap;
+    }
+
+    .title-actions .btn {
+        display: inline-flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.15rem 0.55rem;
+        font-size: 0.75rem;
+        line-height: 1.25;
+        min-height: 1.7rem;
+        white-space: nowrap;
+    }
+
+    .title-actions .btn svg {
+        width: 0.75em;
+        height: 0.75em;
+        flex-shrink: 0;
+    }
+
     .image {
         font-size: 0.8rem;
         color: #6c757d;
         .tag {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
             color: var(--bs-heading-color);
         }
     }
 
-    .function {
-        align-content: center;
+    .service-meta {
         display: flex;
-        height: 100%;
-        width: 100%;
+        flex-wrap: wrap;
         align-items: center;
-        justify-content: end;
+        gap: 0.35rem 0.5rem;
     }
 
     .stats {
@@ -398,55 +469,66 @@ export default defineComponent({
         color: #6c757d;
     }
 
-    .container-instances {
-        border-top: 1px solid $dark-border-color;
+    .instance-name {
+        overflow-wrap: anywhere;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.85rem;
+        color: #6c757d;
     }
 
-    .instance-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding-top: 0.85rem;
+    .entity-label,
+    .instance-branch {
+        user-select: none;
+    }
+
+    .entity-label {
+        margin-inline-start: 0.35rem;
+        font-family: var(--bs-body-font-family);
+        font-size: 0.75rem;
+        font-weight: normal;
+        text-transform: lowercase;
+        opacity: 0.5;
+    }
+
+    h4 .entity-label {
+        font-size: 0.875rem;
+    }
+
+    .container-instances {
+        padding-inline-start: 1rem;
     }
 
     .instance-name {
-        overflow-wrap: anywhere;
-        font-family: 'JetBrains Mono', monospace;
+        position: relative;
+    }
+
+    .instance-branch {
+        position: absolute;
+        inset-inline-start: -1rem;
+        opacity: 0.5;
+    }
+
+    .instance-row + .instance-row {
+        padding-top: 0.65rem;
+    }
+
+    .instance-row .instance-name {
+        color: var(--bs-heading-color);
         font-size: 0.9rem;
     }
 
     @media (max-width: 575.98px) {
-        > .row > [class*="col-"] {
-            width: 100%;
-        }
-
-        .function {
-            justify-content: flex-start;
-            margin-top: 0.75rem;
-        }
-
-        .function .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            width: 100%;
-        }
-
-        .function .btn {
-            flex: 1 1 auto;
-        }
-
-        .instance-row {
-            align-items: stretch;
+        .title-row {
+            align-items: flex-start;
             flex-direction: column;
         }
 
-        .instance-actions {
-            display: flex;
+        .title-actions {
+            width: 100%;
         }
 
-        .instance-actions .btn {
-            flex: 1;
+        .title-actions .btn {
+            flex: 1 1 auto;
         }
     }
 }

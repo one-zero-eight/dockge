@@ -7,7 +7,8 @@
         >
             <h1 v-if="isAdd" class="mb-3">{{ $t("compose") }}</h1>
             <h1 v-else class="mb-3">
-                <Uptime :stack="globalStack" :pill="true" /> {{ stack.name }}
+                <Uptime :stack="globalStack" :pill="true" /> <span>{{ stack.name }}</span>
+                <span class="stack-label opacity-50 user-select-none">{{ $t("project") }}</span>
                 <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
                     ({{ endpointDisplay }})
                 </span>
@@ -94,7 +95,7 @@
             </transition>
 
             <div v-if="$root.isCompact && stack.isManagedByDockge" class="compact-compose-tabs mb-3">
-                <button class="btn" :class="compactTab === 'containers' ? 'btn-primary' : 'btn-normal'" @click="compactTab = 'containers'">{{ $tc("container", 2) }}</button>
+                <button class="btn" :class="compactTab === 'containers' ? 'btn-primary' : 'btn-normal'" @click="compactTab = 'containers'">{{ $t("services") }}</button>
                 <button class="btn" :class="compactTab === 'compose' ? 'btn-primary' : 'btn-normal'" @click="compactTab = 'compose'">Compose</button>
                 <button v-if="isEditMode" class="btn" :class="compactTab === 'environment' ? 'btn-primary' : 'btn-normal'" @click="compactTab = 'environment'">{{ $t("environmentAndNetworks") }}</button>
             </div>
@@ -125,7 +126,7 @@
                     </div>
 
                     <!-- Containers -->
-                    <h4 class="mb-3">{{ $tc("container", 2) }}</h4>
+                    <h4 class="mb-3">{{ $t("services") }}</h4>
 
                     <div v-if="isEditMode" class="input-group mb-3">
                         <input
@@ -886,6 +887,12 @@ export default {
     font-size: 14px;
 }
 
+.stack-label {
+    margin-inline-start: 0.35rem;
+    font-size: 1.25rem;
+    font-weight: normal;
+}
+
 .agent-name {
     font-size: 13px;
     color: $dark-font-color3;
@@ -945,6 +952,8 @@ export default {
     }
 
     .stack-view-mode > .stack-content {
+        --bs-gutter-x: 1rem;
+
         overflow: hidden;
         flex: 1 1 0;
         min-height: 0;
@@ -965,9 +974,7 @@ export default {
         overflow-y: auto;
         flex: 1 1 auto;
         min-height: 0;
-        padding-right: 0.35rem;
         overscroll-behavior: contain;
-        scrollbar-gutter: stable;
     }
 
     .stack-view-mode .compose-column {

@@ -10,7 +10,6 @@
                     {{ $t("Select") }}
                 </button>
 
-                <div class="placeholder"></div>
                 <div class="search-wrapper">
                     <a v-if="searchText == ''" class="search-icon">
                         <font-awesome-icon icon="search" />
@@ -63,11 +62,17 @@
                     <span v-if="agent.endpoint === 'current'">{{ $t("currentEndpoint") }}</span>
                     <span v-else>{{ agent.endpoint }}</span>
                 </div>
-                <StackListItem
-                    v-for="(item, index) in agent.stacks"
-                    v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)" :key="index" :stack="item" :isSelectMode="selectMode"
-                    :isSelected="isSelected" :select="select" :deselect="deselect"
-                />
+                <div v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)">
+                    <div v-if="$root.stacksDirectoryPaths[agent.endpoint]" class="directory-heading">
+                        <font-awesome-icon icon="folder-open" />
+                        <span :title="$root.stacksDirectoryPaths[agent.endpoint]"><bdi dir="ltr">{{ $root.stacksDirectoryPaths[agent.endpoint] }}</bdi></span>
+                    </div>
+                    <StackListItem
+                        v-for="item in agent.stacks"
+                        :key="item.name" :stack="item" :isSelectMode="selectMode"
+                        :isSelected="isSelected" :select="select" :deselect="deselect"
+                    />
+                </div>
             </div>
         </div>
     </div>
@@ -414,10 +419,35 @@ export default {
     }
 }
 
+.directory-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 3px 6px;
+    font-size: 1rem;
+    font-weight: normal;
+
+    svg {
+        flex: 0 0 13px;
+        width: 13px;
+    }
+
+    span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        direction: rtl;
+        text-align: left;
+    }
+}
+
 .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .header-filter {
@@ -434,11 +464,18 @@ export default {
 }
 
 .search-wrapper {
-    display: flex;
-    align-items: center;
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .search-icon {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    height: 38px;
+    display: flex;
+    align-items: center;
     padding: 10px;
     color: #c0c0c0;
 
@@ -454,7 +491,10 @@ export default {
 }
 
 .search-input {
-    max-width: 15em;
+    width: 100%;
+    height: 38px;
+    padding-inline-start: 2.25rem;
+    border-radius: 10px;
 }
 
 .stack-item {

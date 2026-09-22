@@ -642,6 +642,7 @@ export class DockgeServer {
                 dockgeSocket.emitAgent("stackList", {
                     ok: true,
                     stackList: Object.fromEntries(map),
+                    stacksDirectoryPath: this.stackDirFullPath,
                 });
             }
         }

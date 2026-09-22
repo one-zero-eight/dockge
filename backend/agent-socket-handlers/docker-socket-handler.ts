@@ -71,7 +71,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -106,7 +106,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -129,7 +129,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -151,7 +151,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -173,7 +173,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -195,7 +195,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -217,7 +217,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string");
+                    throw new ValidationError("Project name must be a string");
                 }
 
                 const stack = await Stack.getStack(server, stackName, true);
@@ -253,7 +253,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof (stackName) !== "string" || typeof (serviceName) !== "string") {
-                    throw new ValidationError("Stack name and service name must be strings");
+                    throw new ValidationError("Project name and service name must be strings");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -274,7 +274,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof (stackName) !== "string" || typeof (serviceName) !== "string") {
-                    throw new ValidationError("Stack name and service name must be strings");
+                    throw new ValidationError("Project name and service name must be strings");
                 }
 
                 const stack = await Stack.getStack(server, stackName);
@@ -312,7 +312,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof stackName !== "string" || typeof containerName !== "string") {
-                    throw new ValidationError("Stack name and container name must be strings");
+                    throw new ValidationError("Project name and container name must be strings");
                 }
                 const stack = await Stack.getStack(server, stackName, true);
                 await stack.runContainerAction(containerName, "start");
@@ -329,7 +329,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof stackName !== "string" || typeof containerName !== "string") {
-                    throw new ValidationError("Stack name and container name must be strings");
+                    throw new ValidationError("Project name and container name must be strings");
                 }
                 const stack = await Stack.getStack(server, stackName, true);
                 await stack.runContainerAction(containerName, "stop");
@@ -346,7 +346,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof stackName !== "string" || typeof containerName !== "string") {
-                    throw new ValidationError("Stack name and container name must be strings");
+                    throw new ValidationError("Project name and container name must be strings");
                 }
                 const stack = await Stack.getStack(server, stackName, true);
                 await stack.runContainerAction(containerName, "restart");

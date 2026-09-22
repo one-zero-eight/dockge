@@ -32,6 +32,7 @@ export default defineComponent({
             composeTemplate: "",
 
             stackList: {},
+            stacksDirectoryPaths: {} as Record<string, string>,
 
             // All stack list from all agents
             allAgentStackList: {} as Record<string, object>,
@@ -251,6 +252,7 @@ export default defineComponent({
 
             agentSocket.on("stackList", (res) => {
                 if (res.ok) {
+                    this.stacksDirectoryPaths[res.endpoint || "current"] = res.stacksDirectoryPath;
                     if (!res.endpoint) {
                         this.stackList = res.stackList;
                     } else {
