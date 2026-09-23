@@ -7,7 +7,19 @@
             <div class="project-header mb-3">
                 <h1 v-if="isAdd" class="mb-0">{{ $t("compose") }}</h1>
                 <h1 v-else class="project-title mb-0">
-                    <span class="project-status-dot" :class="`bg-${statusColor(globalStack?.status)}`" :title="stackStatusLabel(globalStack || stack)" :aria-label="stackStatusLabel(globalStack || stack)" role="img" /> <span>{{ stack.name }}</span>
+                    <FloatingTooltip placement="top-start">
+                        <template #trigger="{ triggerAttrs }">
+                            <span
+                                v-bind="triggerAttrs"
+                                class="project-status-dot"
+                                :class="`bg-${statusColor(globalStack?.status)}`"
+                                role="img"
+                                :aria-label="$t(projectStatus.title)"
+                            />
+                        </template>
+                        <span class="floating-tooltip-title">{{ $t(projectStatus.title) }}</span>
+                        <span class="floating-tooltip-detail">{{ projectStatus.detail }}</span>
+                    </FloatingTooltip> <span>{{ stack.name }}</span>
                     <span class="stack-label opacity-50 user-select-none">{{ $t("project") }}</span>
                     <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
                         ({{ endpointDisplay }})
@@ -256,11 +268,12 @@ import {
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
     statusColor,
-    stackStatusLabel,
+    stackStatusDetail,
+    stackStatusTitle,
     TERMINAL_COLS,
     RUNNING
 } from "../../../common/util-common";
-import { FloatingDialog, FloatingMenu } from "../components/floating";
+import { FloatingDialog, FloatingMenu, FloatingTooltip } from "../components/floating";
 import ActionGroup from "../components/ActionGroup.vue";
 import dotenv from "dotenv";
 import { ref } from "vue";
@@ -340,6 +353,7 @@ export default {
         CodeMirror,
         FloatingDialog,
         FloatingMenu,
+        FloatingTooltip,
         ActionGroup,
     },
     beforeRouteUpdate(to, from, next) {
@@ -558,6 +572,19 @@ export default {
             return this.$root.completeStackList[this.stack.name + "_" + this.endpoint];
         },
 
+        /**
+         * Status tooltip of the project title: a sentence plus the raw compose status.
+         * @returns {object}
+         */
+        projectStatus() {
+            const stack = this.globalStack || this.stack;
+            const detail = stackStatusDetail(stack);
+            return {
+                title: stackStatusTitle(stack),
+                detail: this.$te(detail) ? this.$t(detail) : detail,
+            };
+        },
+
         status() {
             return this.globalStack?.status;
         },
@@ -660,7 +687,6 @@ export default {
     },
     methods: {
         statusColor,
-        stackStatusLabel,
 
         startServiceStatusTimeout() {
             clearTimeout(serviceStatusTimeout);

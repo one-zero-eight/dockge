@@ -130,15 +130,39 @@ export function statusNameShort(status : number) : string {
     }
 }
 
-export function stackStatusLabel(stack : { status?: number; composeStatus?: string } | null | undefined) : string {
+export function stackStatusTitle(stack : { status?: number; composeStatus?: string } | null | undefined) : string {
+    switch (stack?.status ?? UNKNOWN) {
+        case CREATED_FILE:
+            return "projectStatusInactive";
+        case CREATED_STACK:
+            return "projectStatusCreated";
+        case RUNNING:
+            return "projectStatusActive";
+        case EXITED:
+            return "projectStatusStopped";
+        case RESTARTING:
+            return "projectStatusRestarting";
+        case PAUSED:
+            return "projectStatusPaused";
+        case REMOVING:
+            return "projectStatusRemoving";
+        case DEAD:
+            return "projectStatusDead";
+        default:
+            return "projectStatusUnknown";
+    }
+}
+
+/**
+ * Raw detail of a stack status, shown under {@link stackStatusTitle}.
+ * Either a translation key or a literal `docker compose ls` status.
+ */
+export function stackStatusDetail(stack : { status?: number; composeStatus?: string } | null | undefined) : string {
     if (stack?.composeStatus) {
         return stack.composeStatus;
     }
-    if (stack?.status === CREATED_STACK) {
-        return "created";
-    }
     if (stack?.status === CREATED_FILE) {
-        return "Inactive — not in docker compose ls";
+        return "projectStatusNotDeployed";
     }
     return statusNameShort(stack?.status ?? UNKNOWN);
 }

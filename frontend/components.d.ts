@@ -17,6 +17,7 @@ declare module 'vue' {
     FileTextEditor: typeof import('./src/components/FileTextEditor.vue')['default']
     FloatingDialog: typeof import('./src/components/floating/FloatingDialog.vue')['default']
     FloatingMenu: typeof import('./src/components/floating/FloatingMenu.vue')['default']
+    FloatingTooltip: typeof import('./src/components/floating/FloatingTooltip.vue')['default']
     General: typeof import('./src/components/settings/General.vue')['default']
     GlobalEnv: typeof import('./src/components/settings/GlobalEnv.vue')['default']
     HiddenInput: typeof import('./src/components/HiddenInput.vue')['default']
@@ -28,6 +29,5 @@ declare module 'vue' {
     StackListItem: typeof import('./src/components/StackListItem.vue')['default']
     Terminal: typeof import('./src/components/Terminal.vue')['default']
     TwoFADialog: typeof import('./src/components/TwoFADialog.vue')['default']
-    Uptime: typeof import('./src/components/Uptime.vue')['default']
   }
 }

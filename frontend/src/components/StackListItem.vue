@@ -5,7 +5,21 @@
                 <font-awesome-icon icon="chevron-down" :class="{ collapsed: isCollapsed }" />
             </button>
             <router-link :to="url" class="stack-link">
-                <font-awesome-icon icon="layer-group" class="node-icon" :class="`text-${statusColor(stack.status)}`" :title="stackStatusLabel(stack)" :aria-label="stackStatusLabel(stack)" />
+                <FloatingTooltip placement="right">
+                    <template #trigger="{ triggerAttrs }">
+                        <span
+                            v-bind="triggerAttrs"
+                            class="node-icon-tooltip"
+                            :class="`text-${statusColor(stack.status)}`"
+                            role="img"
+                            :aria-label="$t(stackStatus.title)"
+                        >
+                            <font-awesome-icon icon="layer-group" class="node-icon" />
+                        </span>
+                    </template>
+                    <span class="floating-tooltip-title">{{ $t(stackStatus.title) }}</span>
+                    <span class="floating-tooltip-detail">{{ stackStatus.detail }}</span>
+                </FloatingTooltip>
                 <span class="node-name" :title="stackName">{{ stackName }}</span>
             </router-link>
         </div>
@@ -38,9 +52,13 @@
 
 <script>
 import { parse } from "yaml";
-import { statusColor, stackStatusLabel } from "../../../common/util-common";
+import { statusColor, stackStatusDetail, stackStatusTitle } from "../../../common/util-common";
+import { FloatingTooltip } from "./floating";
 
 export default {
+    components: {
+        FloatingTooltip,
+    },
     props: {
         /** Stack this represents */
         stack: {
@@ -76,7 +94,6 @@ export default {
     data() {
         return {
             statusColor,
-            stackStatusLabel,
             isCollapsed: true,
             collapsedServices: new Set(),
             services: [],
@@ -104,7 +121,18 @@ export default {
         },
         stackName() {
             return this.stack.name;
-        }
+        },
+        /**
+         * Status tooltip of the stack: a sentence plus the raw compose status.
+         * @returns {object}
+         */
+        stackStatus() {
+            const detail = stackStatusDetail(this.stack);
+            return {
+                title: stackStatusTitle(this.stack),
+                detail: this.$te(detail) ? this.$t(detail) : detail,
+            };
+        },
     },
     watch: {
         isSelectMode() {
@@ -304,6 +332,13 @@ export default {
 .node-icon {
     width: 13px;
     flex: 0 0 13px;
+}
+
+.node-icon-tooltip {
+    display: inline-flex;
+    flex: 0 0 13px;
+    align-items: center;
+    cursor: help;
 }
 
 .node-name {
