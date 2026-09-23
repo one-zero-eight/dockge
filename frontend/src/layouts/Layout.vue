@@ -39,6 +39,10 @@
                     </router-link>
                 </li>
 
+                <li v-if="$root.loggedIn" class="nav-item me-2">
+                    <a class="nav-link" href="https://docs.docker.com/compose/" target="_blank" rel="noopener noreferrer"><font-awesome-icon icon="book-open" /> Compose docs</a>
+                </li>
+
                 <li v-if="$root.loggedIn" class="nav-item">
                     <div class="dropdown dropdown-profile-pic">
                         <div class="nav-link" data-bs-toggle="dropdown">

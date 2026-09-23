@@ -1,6 +1,6 @@
 <template>
     <router-link :to="url" :class="{ 'dim' : !stack.isManagedByDockge }" class="item">
-        <Uptime :stack="stack" :fixed-width="true" class="me-2" />
+        <span class="stack-status-dot me-2" :class="`bg-${statusColor(stack.status)}`" :title="stackStatusLabel(stack)" />
         <div class="title">
             <span>{{ stackName }}</span>
         </div>
@@ -8,12 +8,9 @@
 </template>
 
 <script>
-import Uptime from "./Uptime.vue";
+import { statusColor, stackStatusLabel } from "../../../common/util-common";
 
 export default {
-    components: {
-        Uptime
-    },
     props: {
         /** Stack this represents */
         stack: {
@@ -81,6 +78,8 @@ export default {
 
     },
     methods: {
+        statusColor,
+        stackStatusLabel,
         /**
          * Changes the collapsed value of the current stack and saves
          * it to local storage
@@ -117,6 +116,13 @@ export default {
 
 <style lang="scss" scoped>
 @import "../styles/vars.scss";
+
+.stack-status-dot {
+    width: 10px;
+    height: 10px;
+    flex: 0 0 10px;
+    border-radius: 50%;
+}
 
 .small-padding {
     padding-left: 5px !important;

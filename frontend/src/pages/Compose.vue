@@ -7,7 +7,7 @@
         >
             <h1 v-if="isAdd" class="mb-3">{{ $t("compose") }}</h1>
             <h1 v-else class="mb-3">
-                <Uptime :stack="globalStack" :pill="true" /> {{ stack.name }}
+                <span class="project-status-dot" :class="`bg-${statusColor(globalStack?.status)}`" :title="stackStatusLabel(globalStack || stack)" :aria-label="stackStatusLabel(globalStack || stack)" role="img" /> {{ stack.name }}
                 <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
                     ({{ endpointDisplay }})
                 </span>
@@ -223,12 +223,15 @@ import {
     envsubstYAML,
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
+    statusColor,
+    stackStatusLabel,
     RUNNING,
     toComposeProjectName,
 } from "../../../common/util-common";
 import { BModal } from "bootstrap-vue-next";
 import dotenv from "dotenv";
 import { ref } from "vue";
+import { composeLanguageSupport } from "../editor/compose-language";
 
 const template = `
 services:
@@ -268,6 +271,7 @@ export default {
         const extensions = [
             editorTheme,
             yaml(),
+            composeLanguageSupport(),
             lineNumbers(),
             EditorView.focusChangeEffect.of(focusEffectHandler)
         ];
@@ -474,6 +478,8 @@ export default {
         window.removeEventListener("resize", this.updateAvailableHeight);
     },
     methods: {
+        statusColor,
+        stackStatusLabel,
         /**
          * Calculate the desktop viewport space available below the page's layout position.
          */
@@ -797,6 +803,15 @@ export default {
 
 .terminal {
     height: 200px;
+}
+
+.project-status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    vertical-align: 0.12em;
+    cursor: help;
 }
 
 .editor-box {

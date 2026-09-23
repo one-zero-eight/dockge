@@ -9,8 +9,8 @@ import {
     COMBINED_TERMINAL_COLS,
     COMBINED_TERMINAL_ROWS,
     CREATED_FILE,
-    CREATED_STACK,
-    EXITED, getCombinedTerminalName,
+    composeStatusToStatus,
+    getCombinedTerminalName,
     getComposeTerminalName, getContainerExecTerminalName, getContainerInstanceExecTerminalName,
     getContainerLogTerminalName,
     RUNNING, TERMINAL_COLS, TERMINAL_ROWS,
@@ -26,6 +26,7 @@ export class Stack {
 
     name: string;
     protected _status: number = UNKNOWN;
+    protected _composeStatus?: string;
     protected _composeYAML?: string;
     protected _composeENV?: string;
     protected _projectDir?: string;
@@ -92,6 +93,7 @@ export class Stack {
         return {
             name: this.name,
             status: this._status,
+            composeStatus: this._composeStatus,
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
@@ -300,13 +302,9 @@ export class Stack {
 
     async updateStatus() {
         let statusList = await Stack.getStatusList();
-        let status = statusList.get(this.name);
-
-        if (status) {
-            this._status = status;
-        } else {
-            this._status = UNKNOWN;
-        }
+        const entry = statusList.get(this.name);
+        this._status = entry?.status ?? UNKNOWN;
+        this._composeStatus = entry?.composeStatus;
     }
 
     static async getStackList(server : DockgeServer) : Promise<Map<string, Stack>> {
@@ -361,6 +359,7 @@ export class Stack {
             stack._projectDir = path.dirname(file);
             stack._composeFileName = path.basename(file);
             stack._status = this.statusConvert(project.Status);
+            stack._composeStatus = project.Status;
             stackList.set(project.Name, stack);
             byFile.delete(file); // A Compose project exists: no separate draft for this file.
         }
@@ -379,8 +378,8 @@ export class Stack {
      * Get the status list, it will be used to update the status of the stacks
      * Not all status will be returned, only the stack that is deployed or created to `docker compose` will be returned
      */
-    static async getStatusList() : Promise<Map<string, number>> {
-        let statusList = new Map<string, number>();
+    static async getStatusList() : Promise<Map<string, { status: number; composeStatus: string }>> {
+        const statusList = new Map<string, { status: number; composeStatus: string }>();
 
         let res = await childProcessAsync.spawn("docker", [ "compose", "ls", "--all", "--format", "json" ], {
             encoding: "utf-8",
@@ -393,7 +392,10 @@ export class Stack {
         let composeList = JSON.parse(res.stdout.toString());
 
         for (let composeStack of composeList) {
-            statusList.set(composeStack.Name, this.statusConvert(composeStack.Status));
+            statusList.set(composeStack.Name, {
+                status: this.statusConvert(composeStack.Status),
+                composeStatus: composeStack.Status,
+            });
         }
 
         return statusList;
@@ -405,17 +407,7 @@ export class Stack {
      * @param status
      */
     static statusConvert(status : string) : number {
-        if (status.startsWith("created")) {
-            return CREATED_STACK;
-        } else if (status.includes("exited")) {
-            // If one of the service is exited, we consider the stack is exited
-            return EXITED;
-        } else if (status.startsWith("running")) {
-            // If there is no exited services, there should be only running services
-            return RUNNING;
-        } else {
-            return UNKNOWN;
-        }
+        return composeStatusToStatus(status);
     }
 
     static async getStack(server: DockgeServer, stackName: string) : Promise<Stack> {
