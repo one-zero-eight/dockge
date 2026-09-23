@@ -127,10 +127,9 @@ export default {
          * @returns {object}
          */
         stackStatus() {
-            const detail = stackStatusDetail(this.stack);
             return {
                 title: stackStatusTitle(this.stack),
-                detail: this.$te(detail) ? this.$t(detail) : detail,
+                detail: this.formatStackStatusDetail(this.stack),
             };
         },
     },
@@ -145,6 +144,19 @@ export default {
         clearTimeout(this.refreshTimer);
     },
     methods: {
+        /**
+         * Localize the status detail line under the stack icon tooltip.
+         * Compose statuses are shown as "containers running(1), …".
+         * @param {object|null|undefined} stack Stack status payload.
+         * @returns {string}
+         */
+        formatStackStatusDetail(stack) {
+            if (stack?.composeStatus) {
+                return this.$t("projectStatusContainers", { status: stack.composeStatus });
+            }
+            const detail = stackStatusDetail(stack);
+            return this.$te(detail) ? this.$t(detail) : detail;
+        },
         changeCollapsed() {
             if (!this.stack.isManagedByDockge) {
                 return;
@@ -296,7 +308,7 @@ export default {
 
     &.unmanaged-toggle:disabled {
         opacity: 0.35;
-        cursor: not-allowed;
+        cursor: default;
     }
 }
 
@@ -338,7 +350,6 @@ export default {
     display: inline-flex;
     flex: 0 0 13px;
     align-items: center;
-    cursor: help;
 }
 
 .node-name {

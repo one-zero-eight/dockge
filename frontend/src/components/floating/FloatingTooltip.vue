@@ -181,7 +181,7 @@ export default {
 @import "../../styles/vars.scss";
 
 .floating-tooltip-trigger {
-    cursor: help;
+    cursor: inherit;
 }
 
 .floating-tooltip-panel {

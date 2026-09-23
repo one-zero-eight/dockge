@@ -578,10 +578,9 @@ export default {
          */
         projectStatus() {
             const stack = this.globalStack || this.stack;
-            const detail = stackStatusDetail(stack);
             return {
                 title: stackStatusTitle(stack),
-                detail: this.$te(detail) ? this.$t(detail) : detail,
+                detail: this.formatStackStatusDetail(stack),
             };
         },
 
@@ -687,6 +686,20 @@ export default {
     },
     methods: {
         statusColor,
+
+        /**
+         * Localize the status detail line under the project title tooltip.
+         * Compose statuses are shown as "containers running(1), …".
+         * @param {object|null|undefined} stack Stack status payload.
+         * @returns {string}
+         */
+        formatStackStatusDetail(stack) {
+            if (stack?.composeStatus) {
+                return this.$t("projectStatusContainers", { status: stack.composeStatus });
+            }
+            const detail = stackStatusDetail(stack);
+            return this.$te(detail) ? this.$t(detail) : detail;
+        },
 
         startServiceStatusTimeout() {
             clearTimeout(serviceStatusTimeout);
@@ -1403,7 +1416,6 @@ export default {
     height: 12px;
     border-radius: 50%;
     vertical-align: 0.12em;
-    cursor: help;
 }
 
 .project-header {

@@ -154,8 +154,9 @@ export function stackStatusTitle(stack : { status?: number; composeStatus?: stri
 }
 
 /**
- * Raw detail of a stack status, shown under {@link stackStatusTitle}.
- * Either a translation key or a literal `docker compose ls` status.
+ * Detail line under {@link stackStatusTitle}.
+ * Returns either a translation key, or a literal `docker compose ls` status
+ * that the UI prefixes with "containers".
  */
 export function stackStatusDetail(stack : { status?: number; composeStatus?: string } | null | undefined) : string {
     if (stack?.composeStatus) {
