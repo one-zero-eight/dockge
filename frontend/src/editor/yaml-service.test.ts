@@ -8,6 +8,7 @@ import { composeKeyAt, normalizeComposeDocumentation } from "./compose-language"
 import {
     completeComposeDocument,
     createComposeLanguageService,
+    formatComposeDocument,
     hoverComposeDocument,
     validateComposeDocument,
 } from "./yaml-service";
@@ -199,7 +200,41 @@ test("hover returns documentation for image", async () => {
     assert.ok(/image/i.test(value));
 });
 
+test("format normalizes indentation", async () => {
+    const text = `services:
+    web:
+      image: nginx:latest
+`;
+    const edits = await formatComposeDocument(ls, doc(text));
+    assert.ok(edits.length >= 1);
+    assert.match(edits[0].newText, /^services:\n {2}web:\n {4}image: nginx:latest\n$/);
+});
 
+test("format inserts blank lines between services", async () => {
+    const text = `services:
+  api:
+    image: nginx
+  web:
+    image: nginx
+  db:
+    image: postgres
+`;
+    const edits = await formatComposeDocument(ls, doc(text));
+    assert.ok(edits.length >= 1);
+    assert.equal(
+        edits[0].newText,
+        `services:
+  api:
+    image: nginx
+
+  web:
+    image: nginx
+
+  db:
+    image: postgres
+`
+    );
+});
 
 test("Compose documentation removes markdown punctuation escapes", async () => {
     const text = `services:

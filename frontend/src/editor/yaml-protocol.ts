@@ -3,6 +3,7 @@ import type {
     Diagnostic,
     Hover,
     Position,
+    TextEdit,
 } from "vscode-languageserver-types";
 
 export const COMPOSE_SCHEMA_URI = "https://compose-spec.io/compose-spec.json";
@@ -31,6 +32,13 @@ export type YamlRequest =
         version: number;
         text: string;
         position: Position;
+    }
+    | {
+        type: "format";
+        id: number;
+        uri: string;
+        version: number;
+        text: string;
     };
 
 export type YamlResponse =
@@ -51,6 +59,12 @@ export type YamlResponse =
         id: number;
         version: number;
         result: Hover | null;
+    }
+    | {
+        type: "format";
+        id: number;
+        version: number;
+        edits: TextEdit[];
     }
     | {
         type: "error";

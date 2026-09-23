@@ -55,6 +55,7 @@
     "editStack": "Изменить",
     "discardStack": "Отменить",
     "saveStackDraft": "Сохранить",
+    "formatYaml": "Форматировать",
     "notAvailableShort": "Н/Д",
     "stackNotManagedByDockgeMsg": "Данный проект не управляется Dockge.",
     "primaryHostname": "Имя хоста",

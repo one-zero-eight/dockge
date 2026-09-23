@@ -73,6 +73,7 @@ import {
     faCubes,
     faCube,
     faEllipsis,
+    faAlignLeft,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -147,6 +148,7 @@ library.add(
     faCubes,
     faCube,
     faEllipsis,
+    faAlignLeft,
 );
 
 export { FontAwesomeIcon };

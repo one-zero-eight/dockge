@@ -3,6 +3,7 @@ import type {
     Diagnostic,
     Hover,
     Position,
+    TextEdit,
 } from "vscode-languageserver-types";
 import { COMPOSE_DOCUMENT_URI, type YamlRequest, type YamlResponse } from "./yaml-protocol";
 
@@ -77,6 +78,9 @@ export class YamlLanguageClient {
             case "hover":
                 entry.resolve(response.result);
                 break;
+            case "format":
+                entry.resolve(response.edits);
+                break;
         }
     }
 
@@ -121,6 +125,16 @@ export class YamlLanguageClient {
             version,
             text,
             position,
+        });
+    }
+
+    format(text: string, version: number): Promise<TextEdit[]> {
+        return this.request<TextEdit[]>({
+            type: "format",
+            id: this.nextId++,
+            uri: this.documentUri,
+            version,
+            text,
         });
     }
 

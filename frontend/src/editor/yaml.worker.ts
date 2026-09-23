@@ -2,6 +2,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     completeComposeDocument,
     createComposeLanguageService,
+    formatComposeDocument,
     hoverComposeDocument,
     validateComposeDocument,
 } from "./yaml-service";
@@ -39,6 +40,14 @@ self.onmessage = async (event: MessageEvent<YamlRequest>) => {
                 id: request.id,
                 version: request.version,
                 result,
+            };
+        } else if (request.type === "format") {
+            const edits = await formatComposeDocument(languageService, document);
+            response = {
+                type: "format",
+                id: request.id,
+                version: request.version,
+                edits,
             };
         } else {
             const result = await hoverComposeDocument(

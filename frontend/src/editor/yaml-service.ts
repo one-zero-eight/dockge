@@ -2,14 +2,18 @@ import {
     getLanguageService,
     type LanguageService,
 } from "yaml-language-server/lib/esm/languageservice/yamlLanguageService.js";
-import type { TextDocument } from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     CompletionItemKind,
+    Position as LspPosition,
+    Range,
+    TextEdit as LspTextEdit,
     type CompletionItem,
     type CompletionList,
     type Diagnostic,
     type Hover,
     type Position,
+    type TextEdit,
 } from "vscode-languageserver-types";
 import { isMap, isScalar, isSeq, parseDocument } from "yaml";
 import composeSchema from "./schemas/compose-spec.json";
@@ -248,4 +252,49 @@ export async function hoverComposeDocument(
     position: Position
 ): Promise<Hover | null> {
     return ls.doHover(document, position);
+}
+
+/** Insert a blank line between each service entry under `services:`. */
+export function blankLinesBetweenServices(text: string): string {
+    const doc = parseDocument(text);
+    const services = doc.get("services");
+    if (!isMap(services) || services.items.length < 2) {
+        return text;
+    }
+
+    let changed = false;
+    for (let i = 1; i < services.items.length; i++) {
+        const key = services.items[i].key;
+        if (isScalar(key) && !key.spaceBefore) {
+            key.spaceBefore = true;
+            changed = true;
+        }
+    }
+    return changed ? String(doc) : text;
+}
+
+export async function formatComposeDocument(
+    ls: LanguageService,
+    document: TextDocument
+): Promise<TextEdit[]> {
+    const original = document.getText();
+    const edits = await ls.doFormat(document, {
+        singleQuote: false,
+        proseWrap: "preserve",
+        printWidth: 120,
+    });
+
+    let formatted = edits.length > 0 ? TextDocument.applyEdits(document, edits) : original;
+    formatted = blankLinesBetweenServices(formatted);
+
+    if (formatted === original) {
+        return [];
+    }
+
+    return [
+        LspTextEdit.replace(
+            Range.create(LspPosition.create(0, 0), document.positionAt(original.length)),
+            formatted
+        ),
+    ];
 }

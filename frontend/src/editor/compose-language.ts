@@ -246,6 +246,39 @@ function getClient(view: EditorView): YamlLanguageClient | null {
 }
 
 /**
+ * Format the whole Compose document via the YAML language worker (Prettier).
+ * Returns false when there is nothing to apply (already formatted, stale, or unavailable).
+ */
+export async function formatComposeYaml(view: EditorView): Promise<boolean> {
+    const client = getClient(view);
+    if (!client) {
+        return false;
+    }
+    const text = view.state.doc.toString();
+    const version = view.state.field(documentVersionField);
+    try {
+        const edits = await client.format(text, version);
+        if (!edits.length || view.state.field(documentVersionField) !== version) {
+            return false;
+        }
+        const changes = edits
+            .map((edit) => ({
+                from: positionToOffset(view.state.doc, edit.range.start),
+                to: positionToOffset(view.state.doc, edit.range.end),
+                insert: edit.newText,
+            }))
+            .sort((a, b) => b.from - a.from || b.to - a.to);
+        view.dispatch({ changes });
+        return true;
+    } catch (error) {
+        if (error instanceof StaleResponseError) {
+            return false;
+        }
+        throw error;
+    }
+}
+
+/**
  * CodeMirror extensions that provide Compose schema validation, completion, and hover.
  */
 export function composeLanguageSupport(): Extension {

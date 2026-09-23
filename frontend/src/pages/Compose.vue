@@ -167,6 +167,15 @@
                             <button v-if="!isAdd" class="btn btn-normal" :disabled="processing" @click="discardStack">
                                 {{ $t("discardStack") }}
                             </button>
+                            <button
+                                class="btn btn-normal editor-format-btn"
+                                :disabled="processing || formattingYaml"
+                                :title="$t('formatYaml')"
+                                @click="formatYaml"
+                            >
+                                <font-awesome-icon icon="align-left" class="me-1" />
+                                {{ $t("formatYaml") }}
+                            </button>
                         </div>
                     </div>
                     <div v-if="isEditMode && yamlError" v-show="isFullPageEditor || !$root.isCompact || compactTab === 'compose'" class="mb-3">
@@ -262,7 +271,7 @@ import { lineNumbers, EditorView } from "@codemirror/view";
 import { parseDocument } from "yaml";
 
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
-import { composeLanguageSupport } from "../editor/compose-language";
+import { composeLanguageSupport, formatComposeYaml } from "../editor/compose-language";
 import {
     envsubstYAML,
     getComposeTerminalName,
@@ -394,6 +403,7 @@ export default {
             dockerStats: {},
             isEditMode: false,
             submitted: false,
+            formattingYaml: false,
             showActionDialog: false,
             pendingAction: null,
             showProgressDialog: false,
@@ -1057,6 +1067,23 @@ export default {
             this.isEditMode = false;
         },
 
+        async formatYaml() {
+            const view = this.$refs.editor?.view;
+            if (!view || this.formattingYaml) {
+                return;
+            }
+            this.formattingYaml = true;
+            try {
+                await formatComposeYaml(view);
+                this.stack.composeYAML = view.state.doc.toString();
+                this.yamlCodeChange();
+            } catch (e) {
+                this.yamlError = e instanceof Error ? e.message : String(e);
+            } finally {
+                this.formattingYaml = false;
+            }
+        },
+
         yamlToJSON(yamlText) {
             const doc = parseDocument(yamlText);
             if (doc.errors.length > 0) {
@@ -1360,6 +1387,10 @@ export default {
 
     .btn {
         white-space: nowrap;
+    }
+
+    .editor-format-btn {
+        margin-inline-start: auto;
     }
 }
 

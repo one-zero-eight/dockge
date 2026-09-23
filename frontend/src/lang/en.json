@@ -50,6 +50,7 @@
     "editStack": "Edit",
     "discardStack": "Discard",
     "saveStackDraft": "Save",
+    "formatYaml": "Format",
     "notAvailableShort": "N/A",
     "cancel": "Cancel",
     "close": "Close",
