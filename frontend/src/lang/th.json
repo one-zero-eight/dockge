@@ -80,8 +80,6 @@
     "Settings": "การตั้งค่า",
     "Logout": "ออกจากระบบ",
     "Lowercase only": "ตัวเล็กทั้งหมด",
-    "Convert to Compose": "แปลงเป็น Compose",
-    "Docker Run": "เรียกใช้ Docker",
     "active": "ใช้งานอยู่",
     "exited": "ปิดลงแล้ว",
     "inactive": "ไม่ได้ใช้งาน",

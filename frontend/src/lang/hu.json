@@ -56,8 +56,6 @@
     "Username": "Felhasználónév",
     "Password": "Jelszó",
     "Settings": "Beállítások",
-    "Convert to Compose": "Átalakítás Compose-ra",
-    "Docker Run": "Docker Futtatása",
     "active": "aktív",
     "inactive": "inaktív",
     "Appearance": "Megjelenés",

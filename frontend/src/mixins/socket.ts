@@ -29,7 +29,6 @@ export default defineComponent({
             loggedIn: false,
             allowLoginDialog: false,
             username: null,
-            composeTemplate: "",
 
             stackList: {},
             stacksDirectoryPaths: {} as Record<string, string>,

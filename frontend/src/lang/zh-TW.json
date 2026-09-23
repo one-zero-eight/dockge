@@ -79,8 +79,6 @@
     "Settings": "設定",
     "Logout": "登出",
     "Lowercase only": "僅小寫字母",
-    "Convert to Compose": "轉換為 Compose 格式",
-    "Docker Run": "Docker 啟動",
     "active": "已啟動",
     "exited": "已退出",
     "inactive": "未啟動",

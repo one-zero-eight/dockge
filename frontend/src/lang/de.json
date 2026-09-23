@@ -79,8 +79,6 @@
     "Settings": "Einstellungen",
     "Logout": "Abmelden",
     "Lowercase only": "Nur Kleinbuchstaben",
-    "Convert to Compose": "In Compose-Syntax umwandeln",
-    "Docker Run": "Docker Run",
     "active": "aktiv",
     "exited": "beendet",
     "inactive": "inaktiv",

@@ -628,15 +628,9 @@ export default {
             this.processing = false;
             this.isEditMode = true;
 
-            let composeYAML;
+            let composeYAML = template;
             let composeENV;
 
-            if (this.$root.composeTemplate) {
-                composeYAML = this.$root.composeTemplate;
-                this.$root.composeTemplate = "";
-            } else {
-                composeYAML = template;
-            }
             if (this.$root.envTemplate) {
                 composeENV = this.$root.envTemplate;
                 this.$root.envTemplate = "";

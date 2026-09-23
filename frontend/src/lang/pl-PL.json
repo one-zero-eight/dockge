@@ -79,8 +79,6 @@
     "Settings": "Ustawienia",
     "Logout": "Wyloguj się",
     "Lowercase only": "Tylko małe litery",
-    "Convert to Compose": "Przekształć na składnię Compose",
-    "Docker Run": "Uruchom za pomocą Dockera",
     "active": "aktywny",
     "exited": "wyłączony",
     "inactive": "nieaktywny",

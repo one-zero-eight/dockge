@@ -80,8 +80,6 @@
     "Settings": "الاعدادات",
     "Logout": "تسجيل الخروج",
     "Lowercase only": "أحرف صغيرة فقط",
-    "Convert to Compose": "تحويل إلى كومبوز",
-    "Docker Run": "تشغيل Docker",
     "active": "نشيط",
     "exited": "تم الخروج",
     "inactive": "غير نشيط",

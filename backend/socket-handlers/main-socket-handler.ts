@@ -1,5 +1,3 @@
-// @ts-ignore
-import composerize from "composerize";
 import { SocketHandler } from "../socket-handler.js";
 import { DockgeServer } from "../dockge-server";
 import { log } from "../log";
@@ -317,30 +315,6 @@ export class MainSocketHandler extends SocketHandler {
                 if (e instanceof Error) {
                     log.warn("disconnectOtherSocketClients", e.message);
                 }
-            }
-        });
-
-        // composerize
-        socket.on("composerize", async (dockerRunCommand : unknown, callback) => {
-            try {
-                checkLogin(socket);
-
-                if (typeof(dockerRunCommand) !== "string") {
-                    throw new ValidationError("dockerRunCommand must be a string");
-                }
-
-                // Option: 'latest' | 'v2x' | 'v3x'
-                let composeTemplate = composerize(dockerRunCommand, "", "latest");
-
-                // Remove the first line "name: <your project name>"
-                composeTemplate = composeTemplate.split("\n").slice(1).join("\n");
-
-                callback({
-                    ok: true,
-                    composeTemplate,
-                });
-            } catch (e) {
-                callbackError(e, callback);
             }
         });
     }
