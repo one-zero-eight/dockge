@@ -104,6 +104,61 @@ test("completion suggests compose keys", async () => {
     assert.ok(result);
     const labels = result.items.map((item) => item.label);
     assert.ok(labels.includes("image"));
+    assert.ok(!labels.some((label) => String(label).startsWith("!")));
+});
+
+test("completion omits yaml tags when editing a mapping key", async () => {
+    const text = `services:
+  web:
+    image: busybox
+    `;
+    const result = await completeComposeDocument(ls, doc(text), {
+        line: 3,
+        character: 4,
+    });
+    assert.ok(result);
+    const labels = result.items.map((item) => String(item.label));
+    assert.ok(labels.includes("volumes"));
+    assert.ok(!labels.includes("!override"));
+    assert.ok(!labels.includes("!reset"));
+});
+
+test("completion ranks sibling keys and common priors first", async () => {
+    const text = `services:
+  api:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./data:/data
+  web:
+    `;
+    const result = await completeComposeDocument(ls, doc(text), {
+        line: 8,
+        character: 4,
+    });
+    assert.ok(result);
+    const labels = result.items.map((item) => String(item.label));
+    const top = labels.slice(0, 6);
+    assert.ok(top.includes("image"), `top=${top.join(",")}`);
+    assert.ok(top.includes("ports"), `top=${top.join(",")}`);
+    assert.ok(top.includes("volumes"), `top=${top.join(",")}`);
+    assert.ok(labels.indexOf("image") < labels.indexOf("blkio_config"));
+});
+
+test("completion keeps yaml tags after a mapping colon", async () => {
+    const text = `services:
+  web:
+    image: `;
+    const result = await completeComposeDocument(ls, doc(text), {
+        line: 2,
+        character: 11,
+    });
+    assert.ok(result);
+    const labels = result.items.map((item) => String(item.label));
+    assert.ok(labels.includes("!override") || labels.includes("!reset"));
+    assert.ok(!labels.includes("volumes"));
+    assert.ok(!labels.includes("annotations"));
 });
 
 test("completion text edits have ranges", async () => {
@@ -143,6 +198,8 @@ test("hover returns documentation for image", async () => {
             : ("value" in hover.contents ? hover.contents.value : "");
     assert.ok(/image/i.test(value));
 });
+
+
 
 test("Compose documentation removes markdown punctuation escapes", async () => {
     const text = `services:

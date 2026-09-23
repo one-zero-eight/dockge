@@ -7,8 +7,8 @@ import {
     type CompletionContext,
     type CompletionResult,
 } from "@codemirror/autocomplete";
-import { linter, type Diagnostic as CmDiagnostic } from "@codemirror/lint";
 import { syntaxTree } from "@codemirror/language";
+import { linter, type Diagnostic as CmDiagnostic } from "@codemirror/lint";
 import { StateField, type EditorState, type Extension, type Text } from "@codemirror/state";
 import {
     EditorView,
@@ -26,6 +26,7 @@ import {
     type Position,
 } from "vscode-languageserver-types";
 import { StaleResponseError, YamlLanguageClient } from "./yaml-client";
+import { composeCompletionBoost } from "./yaml-service";
 
 function offsetToPosition(doc: Text, offset: number): Position {
     const line = doc.lineAt(offset);
@@ -161,11 +162,13 @@ function completionItemToCm(item: CompletionItem, doc: Text): Completion {
     const documentation = markupToPlainText(
         item.documentation as string | MarkupContentType | undefined
     );
+    const boost = composeCompletionBoost(item.sortText);
     const base: Completion = {
         label: item.label,
         detail: item.detail || undefined,
         info: documentation ? () => createDocElement(documentation) : undefined,
         type: completionType(item.kind),
+        ...(boost !== undefined ? { boost } : {}),
     };
 
     const insertText = item.insertText ?? item.label;
@@ -282,6 +285,14 @@ export function composeLanguageSupport(): Extension {
                 if (!context.view) {
                     return null;
                 }
+                // Activate-on-typing, but ignore Space/Tab (YAML indent) —
+                // only Ctrl+Space (explicit) opens completions after whitespace.
+                if (!context.explicit) {
+                    const typed = context.state.sliceDoc(Math.max(0, context.pos - 1), context.pos);
+                    if (typed === " " || typed === "\t") {
+                        return null;
+                    }
+                }
                 const client = getClient(context.view);
                 if (!client) {
                     return null;
@@ -316,7 +327,6 @@ export function composeLanguageSupport(): Extension {
                     return {
                         from,
                         to,
-                        filter: false,
                         options: result.items.map((item) => completionItemToCm(item, context.state.doc)),
                     };
                 } catch (error) {
