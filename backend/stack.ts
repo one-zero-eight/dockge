@@ -131,6 +131,16 @@ export class Stack {
         return this._status;
     }
 
+    /**
+     * Allow-list stack names so path.join(stacksDir, name) cannot escape stacksDir.
+     * Port of louislam/dockge#997 (76d1785008d924a9f82074096067d6c259b2c0aa).
+     */
+    static validateName(name: unknown) {
+        if (typeof name !== "string" || !name.match(/^[a-z0-9_-]+$/)) {
+            throw new ValidationError("Stack name can only contain [a-z][0-9] _ - only");
+        }
+    }
+
     validate() {
         // Compose project name (API id) must remain Compose-valid; folder names are validated separately on create
         if (!this.name.match(/^[a-z0-9][a-z0-9_-]*$/)) {
@@ -411,6 +421,8 @@ export class Stack {
     }
 
     static async getStack(server: DockgeServer, stackName: string) : Promise<Stack> {
+        // Reject path-escaping lookups before touching the filesystem.
+        Stack.validateName(stackName);
         const stackList = await this.getStackList(server);
         const stack = stackList.get(stackName);
         if (!stack) {
