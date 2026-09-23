@@ -58,7 +58,7 @@ export const DEAD = 8;
 
 /** Prefer unhealthy states when Compose reports a mixture of container states. */
 export function composeStatusToStatus(value : string) : number {
-    const states = new Set([ ...value.matchAll(/\b(running|exited|created|restarting|paused|removing|dead)\s*\(\d+\)/gi) ]
+    const states = new Set([ ...value.matchAll(/\b(running|exited|created|restarting|paused|removing|dead)(?:\s*\(\d+\))?/gi) ]
         .map(match => match[1].toLowerCase()));
     if (states.has("dead")) {
         return DEAD;

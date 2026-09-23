@@ -10,6 +10,7 @@ import {
     COMBINED_TERMINAL_ROWS,
     CREATED_FILE,
     composeStatusToStatus,
+    EXITED,
     getCombinedTerminalName,
     getComposeTerminalName, getContainerExecTerminalName, getContainerInstanceExecTerminalName,
     getContainerLogTerminalName,
@@ -21,6 +22,17 @@ import {
 import { InteractiveTerminal, Terminal } from "./terminal";
 import childProcessAsync from "promisify-child-process";
 import { Settings } from "./settings";
+
+interface ComposeLsEntry {
+    Name: string;
+    Status: string;
+    ConfigFiles?: string;
+}
+
+interface ContainerStateInfo {
+    Status: string;
+    ExitCode?: number;
+}
 
 export class Stack {
 
@@ -377,7 +389,7 @@ export class Stack {
             const stack = new Stack(server, project.Name, undefined, undefined, true);
             stack._projectDir = path.dirname(file);
             stack._composeFileName = path.basename(file);
-            stack._status = this.statusConvert(project.Status);
+            stack._status = await this.resolveComposeStatus(project);
             stack._composeStatus = project.Status;
             stackList.set(project.Name, stack);
             byFile.delete(file); // A Compose project exists: no separate draft for this file.
@@ -412,12 +424,141 @@ export class Stack {
 
         for (let composeStack of composeList) {
             statusList.set(composeStack.Name, {
-                status: this.statusConvert(composeStack.Status),
+                status: await this.resolveComposeStatus(composeStack),
                 composeStatus: composeStack.Status,
             });
         }
 
         return statusList;
+    }
+
+    /**
+     * Inspect project containers via docker, excluding Compose one-off containers.
+     * Uses structured State.Status / State.ExitCode (not human-readable Status text).
+     * Adapted from louislam/dockge#950 (99979e352bb2bbe869107ce455e7e2a7df5b7b7b).
+     */
+    static async getProjectContainerStates(composeName: string): Promise<ContainerStateInfo[] | null> {
+        let idsRes = await childProcessAsync.spawn("docker", [
+            "ps", "-aq",
+            "--filter", `label=com.docker.compose.project=${composeName}`,
+        ], {
+            encoding: "utf-8",
+        });
+
+        if (!idsRes.stdout) {
+            return null;
+        }
+
+        const ids = idsRes.stdout.toString().trim().split("\n").filter(Boolean);
+        if (ids.length === 0) {
+            return null;
+        }
+
+        let inspectRes = await childProcessAsync.spawn("docker", [
+            "inspect",
+            "--format", "{{json .}}",
+            ...ids,
+        ], {
+            encoding: "utf-8",
+        });
+
+        if (!inspectRes.stdout) {
+            return null;
+        }
+
+        const lines = inspectRes.stdout.toString().trim().split("\n").filter(Boolean);
+        const states: ContainerStateInfo[] = [];
+
+        for (const line of lines) {
+            let parsed: {
+                State?: {
+                    Status?: string;
+                    ExitCode?: number;
+                };
+                Config?: {
+                    Labels?: Record<string, string>;
+                };
+            };
+            try {
+                parsed = JSON.parse(line);
+            } catch (e) {
+                return null;
+            }
+
+            if (parsed.Config?.Labels?.["com.docker.compose.oneoff"] === "True") {
+                continue;
+            }
+
+            const status = parsed.State?.Status;
+            if (typeof status !== "string" || status.length === 0) {
+                return null;
+            }
+
+            states.push({
+                Status: status.toLowerCase(),
+                ExitCode: parsed.State?.ExitCode,
+            });
+        }
+
+        return states;
+    }
+
+    /**
+     * Mixed exited+running from `docker compose ls` is RUNNING only when at least one
+     * container is running and every other counted container exited with code 0.
+     */
+    static async resolveMixedRunningAndExited(composeName: string): Promise<number> {
+        const composeStatus = await this.getProjectContainerStates(composeName);
+
+        if (composeStatus === null) {
+            return UNKNOWN;
+        }
+
+        if (composeStatus.length === 0) {
+            return UNKNOWN;
+        }
+
+        let anyRunning = false;
+
+        for (const containerStatus of composeStatus) {
+            if (containerStatus.Status === "running") {
+                anyRunning = true;
+                continue;
+            }
+
+            if (containerStatus.Status === "exited") {
+                const code = containerStatus.ExitCode;
+                if (typeof code !== "number" || !Number.isFinite(code) || code !== 0) {
+                    return EXITED;
+                }
+                continue;
+            }
+
+            // paused / restarting / dead / created / removing / etc.
+            return EXITED;
+        }
+
+        return anyRunning ? RUNNING : EXITED;
+    }
+
+    /**
+     * Resolve a stack's status from a `docker compose ls` entry, upgrading
+     * EXITED to RUNNING when the only exited containers are clean init
+     * containers (exit 0) alongside running services. See issue #806 / PR #950.
+     */
+    static async resolveComposeStatus(composeStack: ComposeLsEntry): Promise<number> {
+        const status = this.statusConvert(composeStack.Status);
+        if (status === EXITED && typeof composeStack.Status === "string" && composeStack.Status.includes("running")) {
+            try {
+                return await this.resolveMixedRunningAndExited(composeStack.Name);
+            } catch (e) {
+                if (e instanceof Error) {
+                    log.warn("resolveComposeStatus", `Failed to inspect stack ${composeStack.Name}: ${e.message}`);
+                }
+                return UNKNOWN;
+            }
+        }
+        return status;
     }
 
     /**
