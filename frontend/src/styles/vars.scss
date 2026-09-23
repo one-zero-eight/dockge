@@ -1,5 +1,5 @@
 $primary: #74c2ff;
-$danger: #dc3545;
+$danger: #dc143c;
 $warning: #f8a306;
 $maintenance: #1747f5;
 $link-color: #111;
@@ -24,3 +24,12 @@ $dropdown-border-radius: 0.5rem;
 
 $primary-gradient: linear-gradient(135deg, #74c2ff 0%, #74c2ff 75%, #86e6a9);
 $primary-gradient-active: linear-gradient(135deg, #74c2ff 0%, #74c2ff 50%, #86e6a9);
+
+$success-gradient: linear-gradient(135deg, #86e6a9 0%, #86e6a9 75%, #74c2ff);
+$success-gradient-active: linear-gradient(135deg, #86e6a9 0%, #86e6a9 50%, #74c2ff);
+
+$danger-gradient: linear-gradient(135deg, #dc143c 0%, #dc143c 75%, #e0455f);
+$danger-gradient-active: linear-gradient(135deg, #dc143c 0%, #dc143c 50%, #e0455f);
+
+$warning-gradient: linear-gradient(135deg, #f8a306 0%, #f8a306 75%, #ffe08a);
+$warning-gradient-active: linear-gradient(135deg, #f8a306 0%, #f8a306 50%, #ffe08a);

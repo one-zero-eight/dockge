@@ -90,7 +90,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
                 checkLogin(socket);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string.");
+                    throw new ValidationError("Project name must be a string.");
                 }
 
                 if (typeof(serviceName) !== "string") {
@@ -104,7 +104,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
                     throw new ValidationError("Shell must be bash or sh.");
                 }
 
-                log.debug("interactiveTerminal", "Stack name: " + stackName);
+                log.debug("interactiveTerminal", "Project name: " + stackName);
                 log.debug("interactiveTerminal", "Service name: " + serviceName);
 
                 // Get stack
@@ -123,7 +123,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof(stackName) !== "string" || typeof(serviceName) !== "string" || typeof(shell) !== "string") {
-                    throw new ValidationError("Stack name, service name and shell must be strings.");
+                    throw new ValidationError("Project name, service name and shell must be strings.");
                 }
                 if (shell !== "bash" && shell !== "sh") {
                     throw new ValidationError("Shell must be bash or sh.");
@@ -140,7 +140,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof(stackName) !== "string" || typeof(containerName) !== "string") {
-                    throw new ValidationError("Stack name and container name must be strings.");
+                    throw new ValidationError("Project name and container name must be strings.");
                 }
                 const stack = await Stack.getStack(server, stackName);
                 const terminalName = await stack.joinContainerLogs(socket, containerName);
@@ -157,7 +157,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof(stackName) !== "string" || typeof(containerName) !== "string") {
-                    throw new ValidationError("Stack name and container name must be strings.");
+                    throw new ValidationError("Project name and container name must be strings.");
                 }
                 const stack = await Stack.getStack(server, stackName);
                 await stack.leaveContainerLogs(socket, containerName);
@@ -171,7 +171,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof(stackName) !== "string" || typeof(containerName) !== "string" || typeof(shell) !== "string") {
-                    throw new ValidationError("Stack name, container name and shell must be strings.");
+                    throw new ValidationError("Project name, container name and shell must be strings.");
                 }
                 if (shell !== "bash" && shell !== "sh") {
                     throw new ValidationError("Shell must be bash or sh.");
@@ -188,7 +188,7 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
                 if (typeof(stackName) !== "string" || typeof(containerName) !== "string" || typeof(shell) !== "string") {
-                    throw new ValidationError("Stack name, container name and shell must be strings.");
+                    throw new ValidationError("Project name, container name and shell must be strings.");
                 }
                 const stack = await Stack.getStack(server, stackName);
                 stack.leaveContainerInstanceTerminal(socket, containerName, shell);
@@ -231,10 +231,10 @@ export class TerminalSocketHandler extends AgentSocketHandler {
             try {
                 checkLogin(socket);
 
-                log.debug("leaveCombinedTerminal", "Stack name: " + stackName);
+                log.debug("leaveCombinedTerminal", "Project name: " + stackName);
 
                 if (typeof(stackName) !== "string") {
-                    throw new ValidationError("Stack name must be a string.");
+                    throw new ValidationError("Project name must be a string.");
                 }
 
                 const stack = await Stack.getStack(server, stackName);

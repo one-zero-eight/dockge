@@ -1,10 +1,17 @@
 <template>
     <div class="terminal-shell shadow-box">
-        <div v-if="showToolbar" class="terminal-toolbar">
-            <button class="btn btn-sm btn-normal" @click="focus"><font-awesome-icon icon="terminal" /> {{ $t("focusTerminal") }}</button>
-            <button class="btn btn-sm btn-normal" :disabled="!hasSelection" @click="copySelection"><font-awesome-icon icon="copy" /> {{ $t("copySelection") }}</button>
-            <button v-if="acceptsInput" class="btn btn-sm btn-normal" @click="handlePaste"><font-awesome-icon icon="paste" /> {{ $t("paste") }}</button>
-            <button class="btn btn-sm btn-normal" @click="clear"><font-awesome-icon icon="trash" /> {{ $t("clearDisplay") }}</button>
+        <div v-if="showToolbar || $slots['toolbar-end']" class="terminal-toolbar">
+            <div class="terminal-toolbar-start">
+                <template v-if="showToolbar">
+                    <button class="btn btn-sm btn-normal" @click="focus"><font-awesome-icon icon="terminal" /> {{ $t("focusTerminal") }}</button>
+                    <button class="btn btn-sm btn-normal" :disabled="!hasSelection" @click="copySelection"><font-awesome-icon icon="copy" /> {{ $t("copySelection") }}</button>
+                    <button v-if="acceptsInput" class="btn btn-sm btn-normal" @click="handlePaste"><font-awesome-icon icon="paste" /> {{ $t("paste") }}</button>
+                    <button class="btn btn-sm btn-normal" @click="clear"><font-awesome-icon icon="trash" /> {{ $t("clearDisplay") }}</button>
+                </template>
+            </div>
+            <div v-if="$slots['toolbar-end']" class="terminal-toolbar-end">
+                <slot name="toolbar-end" />
+            </div>
         </div>
         <div v-pre ref="terminal" class="main-terminal"></div>
     </div>
@@ -73,6 +80,12 @@ export default {
         },
 
         showToolbar: {
+            type: Boolean,
+            default: true,
+        },
+
+        /** When false, keep the initial rows/cols and skip FitAddon. */
+        autoFit: {
             type: Boolean,
             default: true,
         },
@@ -191,7 +204,9 @@ export default {
             }
         });
         // Fit the terminal width to the div container size after terminal is created.
-        this.updateTerminalSize();
+        if (this.autoFit) {
+            this.updateTerminalSize();
+        }
     },
 
     unmounted() {
@@ -207,15 +222,15 @@ export default {
     },
 
     methods: {
-        bind(endpoint, name, callback) {
+        bind(endpoint, name, callback, options = {}) {
             // Workaround: normally this.name should be set, but it is not sometimes, so we use the parameter, but eventually this.name and name must be the same name
             if (name) {
                 this.$root.unbindTerminal(name);
-                this.$root.bindTerminal(endpoint, name, this.terminal, callback);
+                this.$root.bindTerminal(endpoint, name, this.terminal, callback, options);
                 console.debug("Terminal bound via parameter: " + name);
             } else if (this.name) {
                 this.$root.unbindTerminal(this.name);
-                this.$root.bindTerminal(this.endpoint, this.name, this.terminal, callback);
+                this.$root.bindTerminal(this.endpoint, this.name, this.terminal, callback, options);
                 console.debug("Terminal bound: " + this.name);
             } else {
                 console.debug("Terminal name not set");
@@ -266,6 +281,9 @@ export default {
          * It then addes an event listener to the window object to listen for resize events and calls the fit method of the terminalFitAddOn.
          */
         updateTerminalSize() {
+            if (!this.autoFit) {
+                return;
+            }
             if (!Object.hasOwn(this, "terminalFitAddOn")) {
                 this.terminalFitAddOn = new FitAddon();
                 this.terminal.loadAddon(this.terminalFitAddOn);
@@ -277,10 +295,34 @@ export default {
          * Handles the resize event of the terminal component.
          */
         onResizeEvent() {
+            if (!this.autoFit || !this.terminalFitAddOn) {
+                return;
+            }
             this.terminalFitAddOn.fit();
             let rows = this.terminal.rows;
             let cols = this.terminal.cols;
             this.$root.emitAgent(this.endpoint, "terminalResize", this.name, rows, cols);
+        },
+
+        /**
+         * Fit columns to the container width while keeping the configured row count
+         * so compose progress timers stay on-screen without growing the PTY vertically.
+         * @returns {void}
+         */
+        fitKeepRows() {
+            if (!this.terminal) {
+                return;
+            }
+            if (!Object.hasOwn(this, "terminalFitAddOn")) {
+                this.terminalFitAddOn = new FitAddon();
+                this.terminal.loadAddon(this.terminalFitAddOn);
+            }
+            // Propose width from the container, then lock rows to the progress size.
+            this.terminalFitAddOn.fit();
+            const dims = this.terminalFitAddOn.proposeDimensions();
+            const cols = Math.max(dims?.cols || this.terminal.cols, 40);
+            this.terminal.resize(cols, this.rows);
+            this.$root.emitAgent(this.endpoint, "terminalResize", this.name, this.rows, cols);
         },
 
         fit() {
@@ -289,6 +331,22 @@ export default {
 
         clear() {
             this.terminal.clear();
+        },
+
+        reset() {
+            this.terminal?.reset();
+            this.first = true;
+            this.hasSelection = false;
+            this.$emit("selection-change", false);
+        },
+
+        /**
+         * Write raw data into the xterm instance.
+         * @param {string} data VT/text payload
+         * @returns {void}
+         */
+        write(data) {
+            this.terminal?.write(data);
         },
 
         focus() {
@@ -400,10 +458,24 @@ export default {
 .terminal-toolbar {
     display: flex;
     flex: 0 0 auto;
-    overflow-x: auto;
+    align-items: center;
+    justify-content: space-between;
     gap: 0.4rem;
+    overflow-x: auto;
     padding: 0.5rem;
     background: #161b22;
+}
+
+.terminal-toolbar-start,
+.terminal-toolbar-end {
+    display: flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.terminal-toolbar-end {
+    margin-inline-start: auto;
 }
 
 .terminal-toolbar .btn {

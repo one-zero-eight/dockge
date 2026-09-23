@@ -8,7 +8,6 @@ import { FontAwesomeIcon } from "./icon.js";
 import { i18n } from "./i18n";
 
 // Dependencies
-import "bootstrap";
 import Toast, { POSITION, useToast } from "vue-toastification";
 import "@xterm/xterm/lib/xterm.js";
 
