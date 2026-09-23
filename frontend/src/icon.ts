@@ -35,10 +35,13 @@ import {
     faCopy,
     faCheck,
     faFile,
+    faBookOpen,
     faAward,
     faLink,
     faChevronDown,
     faChevronUp,
+    faChevronLeft,
+    faChevronRight,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -66,6 +69,10 @@ import {
     faBars,
     faArrowLeft,
     faPaste,
+    faLayerGroup,
+    faCubes,
+    faCube,
+    faEllipsis,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -97,10 +104,13 @@ library.add(
     faCopy,
     faCheck,
     faFile,
+    faBookOpen,
     faAward,
     faLink,
     faChevronDown,
     faChevronUp,
+    faChevronLeft,
+    faChevronRight,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -133,6 +143,10 @@ library.add(
     faBars,
     faArrowLeft,
     faPaste,
+    faLayerGroup,
+    faCubes,
+    faCube,
+    faEllipsis,
 );
 
 export { FontAwesomeIcon };

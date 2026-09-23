@@ -1,7 +1,6 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
 import Components from "unplugin-vue-components/vite";
-import { BootstrapVueNextResolver } from "unplugin-vue-components/resolvers";
 import viteCompression from "vite-plugin-compression";
 import "vue";
 
@@ -16,14 +15,21 @@ export default defineConfig({
         "FRONTEND_VERSION": JSON.stringify(process.env.npm_package_version),
     },
     root: "./frontend",
+    resolve: {
+        alias: {
+            // yaml-language-server imports Node's path; browser workers need a polyfill.
+            path: "path-browserify",
+        },
+    },
+    worker: {
+        format: "es",
+    },
     build: {
         outDir: "../frontend-dist",
     },
     plugins: [
         vue(),
-        Components({
-            resolvers: [ BootstrapVueNextResolver() ],
-        }),
+        Components(),
         viteCompression({
             algorithm: "gzip",
             filter: viteCompressionFilter,

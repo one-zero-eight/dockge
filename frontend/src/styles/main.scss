@@ -1,6 +1,5 @@
 @import "vars.scss";
 @import "bootstrap/scss/bootstrap";
-@import "bootstrap-vue-next/dist/bootstrap-vue-next.css";
 
 #app {
     font-family: BlinkMacSystemFont, segoe ui, Roboto, helvetica neue, Arial, noto sans, sans-serif, apple color emoji, segoe ui emoji, segoe ui symbol, noto color emoji;
@@ -8,11 +7,37 @@
 
 html, body, #app {
     min-width: 320px;
-    min-height: 100%;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
 }
 
-body {
+#app > .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#app > .app-layout > .desktop-header {
+    flex: 0 0 auto;
+}
+
+#app > .app-layout > main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
     overflow-x: hidden;
+    overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+    #app > .app-layout > main {
+        padding: 12px 12px calc(76px + env(safe-area-inset-bottom));
+    }
 }
 
 h1 {
@@ -27,8 +52,19 @@ textarea.form-control {
     border-radius: 19px;
 }
 
+* {
+    scrollbar-width: thin;
+    scrollbar-color: $primary transparent;
+}
+
 ::-webkit-scrollbar {
-    width: 10px;
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 .bg-maintenance {
@@ -85,7 +121,7 @@ optgroup {
 
 // Scrollbar
 ::-webkit-scrollbar-thumb {
-    background: #ccc;
+    background: $primary;
     border-radius: 20px;
 }
 
@@ -157,9 +193,17 @@ optgroup {
 
 .btn-warning {
     color: white;
+    background: $warning-gradient;
+    border-color: transparent;
 
     &:hover, &:active, &:focus, &.active {
         color: white;
+        background: $warning-gradient-active;
+        border-color: transparent;
+    }
+
+    .dark & {
+        color: $dark-font-color2;
     }
 }
 
@@ -273,10 +317,6 @@ optgroup {
 
     mark, .mark {
         background-color: #b6ad86;
-    }
-
-    &::-webkit-scrollbar-thumb, ::-webkit-scrollbar-thumb {
-        background: $dark-border-color;
     }
 
     .shadow-box {
@@ -469,17 +509,13 @@ optgroup {
  */
 
 // page-change
-.slide-fade-enter-active {
-    transition: all 0.2s $easing-in;
-}
-
+.slide-fade-enter-active,
 .slide-fade-leave-active {
-    transition: all 0.2s $easing-in;
+    transition: opacity 0.2s $easing-in;
 }
 
 .slide-fade-enter-from,
 .slide-fade-leave-to {
-    transform: translateY(50px);
     opacity: 0;
 }
 
@@ -514,12 +550,6 @@ optgroup {
 .stack-list {
     &.scrollbar {
         overflow-y: auto;
-    }
-
-    @media (max-width: 770px) {
-        &.scrollbar {
-            height: calc(100% - 97px);
-        }
     }
 
     .item {
@@ -571,8 +601,120 @@ optgroup {
 
 .btn-success {
     color: #fff;
-    background-color: #4caf50;
-    border-color: #4caf50;
+    background: $success-gradient;
+    border-color: transparent;
+
+    &:hover,
+    &:focus,
+    &:active,
+    &.active {
+        color: #fff;
+        background: $success-gradient-active;
+        border-color: transparent;
+    }
+
+    .dark & {
+        color: $dark-font-color2;
+    }
+}
+
+.btn-danger {
+    color: #fff;
+    background: $danger-gradient;
+    border-color: transparent;
+
+    &:hover,
+    &:focus,
+    &:active,
+    &.active {
+        color: #fff;
+        background: $danger-gradient-active;
+        border-color: transparent;
+    }
+}
+
+.dark {
+    .Vue-Toastification__toast {
+        min-height: 3rem;
+        padding: 0.85rem 1rem;
+        border: 0;
+        border-radius: 10px;
+        background-color: $dark-bg;
+        color: $dark-font-color;
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 12px 40px rgba(0, 0, 0, 0.55);
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+
+    .Vue-Toastification__toast--success,
+    .Vue-Toastification__toast--error,
+    .Vue-Toastification__toast--warning,
+    .Vue-Toastification__toast--info,
+    .Vue-Toastification__toast--default {
+        background-color: $dark-bg;
+        color: $dark-font-color;
+    }
+
+    .Vue-Toastification__toast-body {
+        color: $dark-font-color;
+        line-height: 1.4;
+    }
+
+    .Vue-Toastification__close-button {
+        color: $dark-font-color3;
+        opacity: 0.85;
+        text-shadow: none;
+
+        &:hover,
+        &:focus {
+            color: $dark-font-color;
+            opacity: 1;
+        }
+    }
+
+    .Vue-Toastification__progress-bar {
+        background: rgba($dark-font-color3, 0.45);
+    }
+
+    .Vue-Toastification__icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        margin: auto 0.85rem auto 0;
+        border-radius: 50%;
+
+        svg {
+            display: block;
+            width: 0.85rem;
+            height: 0.85rem;
+        }
+    }
+
+    .Vue-Toastification__toast--success .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $success-gradient;
+    }
+
+    .Vue-Toastification__toast--error .Vue-Toastification__icon {
+        color: #fff;
+        background: $danger-gradient;
+    }
+
+    .Vue-Toastification__toast--warning .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $warning-gradient;
+    }
+
+    .Vue-Toastification__toast--info .Vue-Toastification__icon,
+    .Vue-Toastification__toast--default .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $primary-gradient;
+    }
 }
 
 
@@ -724,6 +866,96 @@ code {
 }
 .cm-focused {
     outline: none !important;
+}
+
+// Compose YAML schema hints and completions. These tooltips may be mounted
+// outside the editor, so scope by their dedicated classes rather than .editor-box.
+.cm-tooltip.cm-tooltip-hover:has(.cm-compose-hover),
+.cm-tooltip.cm-compose-completions,
+.cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    width: min(360px, calc(100vw - 24px));
+    max-width: min(360px, calc(100vw - 24px));
+    border: 1px solid #c9d2dc;
+    border-radius: 8px;
+    background: #fff;
+    color: #202c39;
+    box-shadow: 0 10px 30px rgba(7, 10, 16, 0.2);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.cm-tooltip.cm-tooltip-hover .cm-compose-hover,
+.cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    padding: 10px 12px;
+}
+
+.cm-compose-hover {
+    max-height: min(240px, 50vh);
+    overflow: auto;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.cm-compose-hover-text {
+    margin: 0 0 8px;
+}
+
+.cm-compose-hover-text:last-child {
+    margin-bottom: 0;
+}
+
+.cm-compose-hover code {
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(116, 194, 255, 0.12);
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.93em;
+}
+
+.cm-tooltip.cm-compose-completions {
+    min-width: 200px;
+    overflow: hidden;
+}
+
+.cm-tooltip.cm-compose-completions > ul {
+    max-height: min(260px, 45vh);
+    font-family: inherit;
+}
+
+.cm-tooltip.cm-compose-completions > ul > li {
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.cm-tooltip.cm-compose-completions > ul > li[aria-selected] {
+    background: rgba(116, 194, 255, 0.18);
+    color: inherit;
+}
+
+.cm-tooltip.cm-compose-completions .cm-completionMatchedText {
+    color: #1375ab;
+    text-decoration: none;
+    font-weight: 650;
+}
+
+.dark .cm-tooltip.cm-tooltip-hover:has(.cm-compose-hover),
+.dark .cm-tooltip.cm-compose-completions,
+.dark .cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    border-color: $dark-border-color;
+    background: $dark-header-bg;
+    color: #dce5ef;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.dark .cm-tooltip.cm-compose-completions > ul > li[aria-selected] {
+    background: rgba(116, 194, 255, 0.2);
+    color: #e7f4ff;
+}
+
+.dark .cm-tooltip.cm-compose-completions .cm-completionMatchedText {
+    color: $highlight;
 }
 
 // Localization

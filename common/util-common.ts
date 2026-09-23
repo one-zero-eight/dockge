@@ -51,6 +51,38 @@ export const CREATED_FILE = 1;
 export const CREATED_STACK = 2;
 export const RUNNING = 3;
 export const EXITED = 4;
+export const RESTARTING = 5;
+export const PAUSED = 6;
+export const REMOVING = 7;
+export const DEAD = 8;
+
+/** Prefer unhealthy states when Compose reports a mixture of container states. */
+export function composeStatusToStatus(value : string) : number {
+    const states = new Set([ ...value.matchAll(/\b(running|exited|created|restarting|paused|removing|dead)(?:\s*\(\d+\))?/gi) ]
+        .map(match => match[1].toLowerCase()));
+    if (states.has("dead")) {
+        return DEAD;
+    }
+    if (states.has("removing")) {
+        return REMOVING;
+    }
+    if (states.has("restarting")) {
+        return RESTARTING;
+    }
+    if (states.has("exited")) {
+        return EXITED;
+    }
+    if (states.has("paused")) {
+        return PAUSED;
+    }
+    if (states.has("created")) {
+        return CREATED_STACK;
+    }
+    if (states.has("running")) {
+        return RUNNING;
+    }
+    return UNKNOWN;
+}
 
 export function statusName(status : number) : string {
     switch (status) {
@@ -62,6 +94,14 @@ export function statusName(status : number) : string {
             return "running";
         case EXITED:
             return "exited";
+        case RESTARTING:
+            return "restarting";
+        case PAUSED:
+            return "paused";
+        case REMOVING:
+            return "removing";
+        case DEAD:
+            return "dead";
         default:
             return "unknown";
     }
@@ -72,25 +112,50 @@ export function statusNameShort(status : number) : string {
         case CREATED_FILE:
             return "inactive";
         case CREATED_STACK:
-            return "inactive";
+            return "created";
         case RUNNING:
             return "active";
         case EXITED:
             return "exited";
+        case RESTARTING:
+            return "restarting";
+        case PAUSED:
+            return "paused";
+        case REMOVING:
+            return "removing";
+        case DEAD:
+            return "dead";
         default:
             return "?";
     }
 }
 
+export function stackStatusLabel(stack : { status?: number; composeStatus?: string } | null | undefined) : string {
+    if (stack?.composeStatus) {
+        return stack.composeStatus;
+    }
+    if (stack?.status === CREATED_STACK) {
+        return "created";
+    }
+    if (stack?.status === CREATED_FILE) {
+        return "Inactive — not in docker compose ls";
+    }
+    return statusNameShort(stack?.status ?? UNKNOWN);
+}
+
 export function statusColor(status : number) : string {
     switch (status) {
         case CREATED_FILE:
-            return "dark";
+            return "secondary";
         case CREATED_STACK:
-            return "dark";
+        case PAUSED:
+        case RESTARTING:
+        case REMOVING:
+            return "warning";
         case RUNNING:
             return "primary";
         case EXITED:
+        case DEAD:
             return "danger";
         default:
             return "secondary";

@@ -1,5 +1,5 @@
 <template>
-    <div class="shadow-box mb-3" :style="boxStyle">
+    <div class="shadow-box mb-3 stack-list-box">
         <div class="list-header">
             <div class="header-top">
                 <!-- TODO -->
@@ -10,7 +10,6 @@
                     {{ $t("Select") }}
                 </button>
 
-                <div class="placeholder"></div>
                 <div class="search-wrapper">
                     <a v-if="searchText == ''" class="search-icon">
                         <font-awesome-icon icon="search" />
@@ -47,7 +46,7 @@
                 </span>
             </div>
         </div>
-        <div ref="stackList" class="stack-list" :class="{ scrollbar: scrollbar }" :style="stackListStyle">
+        <div ref="stackList" class="stack-list" :class="{ scrollbar: scrollbar }">
             <div v-if="agentStackList[0] && agentStackList[0].stacks.length === 0" class="text-center mt-3">
                 <router-link to="/compose">{{ $t("addFirstStackMsg") }}</router-link>
             </div>
@@ -63,11 +62,17 @@
                     <span v-if="agent.endpoint === 'current'">{{ $t("currentEndpoint") }}</span>
                     <span v-else>{{ agent.endpoint }}</span>
                 </div>
-                <StackListItem
-                    v-for="(item, index) in agent.stacks"
-                    v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)" :key="index" :stack="item" :isSelectMode="selectMode"
-                    :isSelected="isSelected" :select="select" :deselect="deselect"
-                />
+                <div v-show="$root.agentCount === 1 || !closedAgents.get(agent.endpoint)">
+                    <div v-if="$root.stacksDirectoryPaths[agent.endpoint]" class="directory-heading">
+                        <font-awesome-icon icon="folder-open" />
+                        <span :title="$root.stacksDirectoryPaths[agent.endpoint]"><bdi dir="ltr">{{ $root.stacksDirectoryPaths[agent.endpoint] }}</bdi></span>
+                    </div>
+                    <StackListItem
+                        v-for="item in agent.stacks"
+                        :key="item.name" :stack="item" :isSelectMode="selectMode"
+                        :isSelected="isSelected" :select="select" :deselect="deselect"
+                    />
+                </div>
             </div>
         </div>
     </div>
@@ -100,7 +105,6 @@ export default {
             selectAll: false,
             disableSelectAllWatcher: false,
             selectedStacks: {},
-            windowTop: 0,
             filterState: {
                 status: null,
                 active: null,
@@ -110,25 +114,6 @@ export default {
         };
     },
     computed: {
-        /**
-         * Improve the sticky appearance of the list by increasing its
-         * height as user scrolls down.
-         * Not used on mobile.
-         * @returns {object} Style for stack list
-         */
-        boxStyle() {
-            if (window.innerWidth > 550) {
-                return {
-                    height: `calc(100vh - 160px + ${this.windowTop}px)`,
-                };
-            } else {
-                return {
-                    height: "calc(100vh - 160px)",
-                };
-            }
-
-        },
-
         /**
          * Returns a sorted list of stacks based on the applied filters and search text.
          * @returns {Array} The sorted list of stacks.
@@ -231,19 +216,6 @@ export default {
             return document.body.classList.contains("dark");
         },
 
-        stackListStyle() {
-            //let listHeaderHeight = 107;
-            let listHeaderHeight = 60;
-
-            if (this.selectMode) {
-                listHeaderHeight += 42;
-            }
-
-            return {
-                "height": `calc(100% - ${listHeaderHeight}px)`
-            };
-        },
-
         selectedStackCount() {
             return Object.keys(this.selectedStacks).length;
         },
@@ -288,25 +260,7 @@ export default {
             }
         },
     },
-    mounted() {
-        window.addEventListener("scroll", this.onScroll);
-    },
-    beforeUnmount() {
-        window.removeEventListener("scroll", this.onScroll);
-    },
     methods: {
-        /**
-         * Handle user scroll
-         * @returns {void}
-         */
-        onScroll() {
-            if (window.top.scrollY <= 133) {
-                this.windowTop = window.top.scrollY;
-            } else {
-                this.windowTop = 133;
-            }
-        },
-
         /**
          * Clear the search bar
          * @returns {void}
@@ -390,18 +344,23 @@ export default {
 <style lang="scss" scoped>
 @import "../styles/vars.scss";
 
-.shadow-box {
-    height: calc(100vh - 150px);
-    position: sticky;
-    top: 10px;
-}
+.stack-list-box {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    margin-bottom: 0 !important;
 
-.small-padding {
-    padding-left: 5px !important;
-    padding-right: 5px !important;
+    @media (min-width: 992px) {
+        position: sticky;
+        top: 0;
+        max-height: 100%;
+    }
 }
 
 .list-header {
+    flex: 0 0 auto;
     border-bottom: 1px solid #dee2e6;
     border-radius: 10px 10px 0 0;
     margin: -10px;
@@ -414,10 +373,45 @@ export default {
     }
 }
 
+.stack-list {
+    flex: 1 1 auto;
+    min-height: 0;
+
+    &.scrollbar {
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+}
+
+.directory-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 34px;
+    padding: 3px 6px;
+    font-size: 1rem;
+    font-weight: normal;
+
+    svg {
+        flex: 0 0 13px;
+        width: 13px;
+    }
+
+    span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        direction: rtl;
+        text-align: left;
+    }
+}
+
 .header-top {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
 }
 
 .header-filter {
@@ -427,18 +421,25 @@ export default {
 
 @media (max-width: 770px) {
     .list-header {
-        margin: -20px;
+        margin: -10px;
         margin-bottom: 10px;
-        padding: 5px;
+        padding: 8px;
     }
 }
 
 .search-wrapper {
-    display: flex;
-    align-items: center;
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .search-icon {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    height: 38px;
+    display: flex;
+    align-items: center;
     padding: 10px;
     color: #c0c0c0;
 
@@ -454,7 +455,10 @@ export default {
 }
 
 .search-input {
-    max-width: 15em;
+    width: 100%;
+    height: 38px;
+    padding-inline-start: 2.25rem;
+    border-radius: 10px;
 }
 
 .stack-item {

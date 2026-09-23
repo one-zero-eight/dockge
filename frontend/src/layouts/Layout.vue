@@ -1,5 +1,5 @@
 <template>
-    <div :class="classes">
+    <div class="app-layout" :class="classes">
         <div v-if="! $root.socketIO.connected && ! $root.socketIO.firstConnect" class="lost-connection">
             <div class="container-fluid">
                 {{ $root.socketIO.connectionErrorMsg }}
@@ -10,8 +10,8 @@
         </div>
 
         <!-- Desktop header -->
-        <header v-if="!$root.isCompact" class="desktop-header d-flex flex-wrap justify-content-center py-3 mb-3 border-bottom">
-            <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+        <header v-if="!$root.isCompact" class="desktop-header d-flex flex-wrap justify-content-center py-3 border-bottom">
+            <router-link to="/" class="d-flex align-items-center mb-md-0 me-md-auto text-dark text-decoration-none">
                 <object class="bi me-2 ms-4" width="40" height="40" data="/icon.svg" />
                 <span class="fs-4 title">Dockge</span>
             </router-link>
@@ -39,72 +39,44 @@
                     </router-link>
                 </li>
 
+                <li v-if="$root.loggedIn" class="nav-item me-2">
+                    <a class="nav-link" href="https://docs.docker.com/compose/" target="_blank" rel="noopener noreferrer"><font-awesome-icon icon="book-open" /> Compose docs</a>
+                </li>
+
                 <li v-if="$root.loggedIn" class="nav-item">
-                    <div class="dropdown dropdown-profile-pic">
-                        <div class="nav-link" data-bs-toggle="dropdown">
-                            <div class="profile-pic">{{ $root.usernameFirstChar }}</div>
-                            <font-awesome-icon icon="angle-down" />
-                        </div>
+                    <FloatingMenu placement="bottom-end" panel-class="profile-menu">
+                        <template #trigger="{ triggerAttrs }">
+                            <div v-bind="triggerAttrs" class="nav-link dropdown-profile-pic" role="button" tabindex="0">
+                                <div class="profile-pic">{{ $root.usernameFirstChar }}</div>
+                                <font-awesome-icon icon="angle-down" />
+                            </div>
+                        </template>
 
                         <!-- Header's Dropdown Menu -->
-                        <ul class="dropdown-menu">
-                            <!-- Username -->
-                            <li>
-                                <i18n-t v-if="$root.username != null" tag="span" keypath="signedInDisp" class="dropdown-item-text">
-                                    <strong>{{ $root.username }}</strong>
-                                </i18n-t>
-                                <span v-if="$root.username == null" class="dropdown-item-text">{{ $t("signedInDispDisabled") }}</span>
-                            </li>
+                        <div class="dropdown-item-text">
+                            <i18n-t v-if="$root.username != null" tag="span" keypath="signedInDisp">
+                                <strong>{{ $root.username }}</strong>
+                            </i18n-t>
+                            <span v-if="$root.username == null">{{ $t("signedInDispDisabled") }}</span>
+                        </div>
 
-                            <li><hr class="dropdown-divider"></li>
+                        <div class="floating-menu-divider" />
 
-                            <!-- Functions -->
+                        <button class="floating-menu-item" type="button" role="menuitem" @click="scanFolder">
+                            <font-awesome-icon icon="arrows-rotate" /> {{ $t("scanFolder") }}
+                        </button>
 
-                            <!--<li>
-                                <router-link to="/registry" class="dropdown-item" :class="{ active: $route.path.includes('settings') }">
-                                    <font-awesome-icon icon="warehouse" /> {{ $t("registry") }}
-                                </router-link>
-                            </li>-->
+                        <router-link to="/settings/general" class="floating-menu-item" role="menuitem" :class="{ active: $route.path.includes('settings') }">
+                            <font-awesome-icon icon="cog" /> {{ $t("Settings") }}
+                        </router-link>
 
-                            <li>
-                                <button class="dropdown-item" @click="scanFolder">
-                                    <font-awesome-icon icon="arrows-rotate" /> {{ $t("scanFolder") }}
-                                </button>
-                            </li>
-
-                            <li>
-                                <router-link to="/settings/general" class="dropdown-item" :class="{ active: $route.path.includes('settings') }">
-                                    <font-awesome-icon icon="cog" /> {{ $t("Settings") }}
-                                </router-link>
-                            </li>
-
-                            <li>
-                                <button class="dropdown-item" @click="$root.logout">
-                                    <font-awesome-icon icon="sign-out-alt" />
-                                    {{ $t("Logout") }}
-                                </button>
-                            </li>
-                        </ul>
-                    </div>
+                        <button class="floating-menu-item" type="button" role="menuitem" @click="$root.logout">
+                            <font-awesome-icon icon="sign-out-alt" />
+                            {{ $t("Logout") }}
+                        </button>
+                    </FloatingMenu>
                 </li>
             </ul>
-        </header>
-
-        <header v-if="$root.isCompact" class="compact-header border-bottom">
-            <router-link to="/" class="brand text-decoration-none">
-                <object class="bi" width="32" height="32" data="/icon.svg" />
-                <span>Dockge</span>
-            </router-link>
-            <div v-if="$root.loggedIn" class="dropdown dropdown-profile-pic">
-                <button class="nav-link border-0" data-bs-toggle="dropdown" :aria-label="$t('Account')">
-                    <div class="profile-pic">{{ $root.usernameFirstChar }}</div>
-                    <font-awesome-icon icon="angle-down" />
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><router-link to="/settings/general" class="dropdown-item"><font-awesome-icon icon="cog" /> {{ $t("Settings") }}</router-link></li>
-                    <li><button class="dropdown-item" @click="$root.logout"><font-awesome-icon icon="sign-out-alt" /> {{ $t("Logout") }}</button></li>
-                </ul>
-            </div>
         </header>
 
         <main>
@@ -128,6 +100,7 @@
 
 <script>
 import Login from "../components/Login.vue";
+import { FloatingMenu } from "../components/floating";
 import { compareVersions } from "compare-versions";
 import { ALL_ENDPOINTS } from "../../../common/util-common";
 
@@ -135,6 +108,7 @@ export default {
 
     components: {
         Login,
+        FloatingMenu,
     },
 
     data() {
@@ -241,41 +215,12 @@ export default {
     }
 }
 
-main {
-    min-height: calc(100vh - 160px);
-}
-
-.compact-header {
-    position: sticky;
-    z-index: 1020;
-    top: 0;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 58px;
-    padding: max(8px, env(safe-area-inset-top)) 14px 8px;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-
-    .brand {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        color: inherit;
-        font-size: 1.1rem;
-        font-weight: 700;
-    }
-}
-
-.mobile main, .mobile .compact-header + main {
+.mobile main {
     padding-bottom: calc(76px + env(safe-area-inset-bottom));
 }
 
-@media (max-width: 991.98px) {
-    main {
-        min-height: calc(100dvh - 120px);
-        padding: 12px 12px calc(76px + env(safe-area-inset-bottom));
-    }
+.desktop-header {
+    margin-bottom: 0;
 }
 
 .title {
@@ -296,63 +241,17 @@ main {
 }
 
 // Profile Pic Button with Dropdown
-.dropdown-profile-pic {
+.nav-link.dropdown-profile-pic {
+    cursor: pointer;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    background-color: rgba(200, 200, 200, 0.2);
+    padding: 0.5rem 0.8rem;
     user-select: none;
 
-    .nav-link {
-        cursor: pointer;
-        display: flex;
-        gap: 6px;
-        align-items: center;
-        background-color: rgba(200, 200, 200, 0.2);
-        padding: 0.5rem 0.8rem;
-
-        &:hover {
-            background-color: rgba(255, 255, 255, 0.2);
-        }
-    }
-
-    .dropdown-menu {
-        transition: all 0.2s;
-        padding-left: 0;
-        padding-bottom: 0;
-        margin-top: 8px !important;
-        border-radius: 16px;
-        overflow: hidden;
-
-        .dropdown-divider {
-            margin: 0;
-            border-top: 1px solid rgba(0, 0, 0, 0.4);
-            background-color: transparent;
-        }
-
-        .dropdown-item-text {
-            font-size: 14px;
-            padding-bottom: 0.7rem;
-        }
-
-        .dropdown-item {
-            padding: 0.7rem 1rem;
-        }
-
-        .dark & {
-            background-color: $dark-bg;
-            color: $dark-font-color;
-            border-color: $dark-border-color;
-
-            .dropdown-item {
-                color: $dark-font-color;
-
-                &.active {
-                    color: $dark-font-color2;
-                    background-color: $highlight !important;
-                }
-
-                &:hover {
-                    background-color: $dark-bg2;
-                }
-            }
-        }
+    &:hover {
+        background-color: rgba(255, 255, 255, 0.2);
     }
 
     .profile-pic {
@@ -383,10 +282,17 @@ main {
     .bottom-nav {
         background-color: $dark-bg;
     }
+}
 
-    .compact-header {
-        background: rgba($dark-header-bg, 0.96);
-        border-bottom-color: $dark-border-color !important;
+// Profile dropdown panel lives in a teleport, so it cannot be reached by the scoped selectors above
+:global(.profile-menu) {
+    min-width: 16rem;
+    padding: 0.35rem;
+
+    .floating-menu-text,
+    .dropdown-item-text {
+        font-size: 14px;
+        opacity: 1;
     }
 }
 </style>

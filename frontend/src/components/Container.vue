@@ -1,213 +1,121 @@
 <template>
-    <div class="shadow-box big-padding mb-3 container">
-        <div class="row">
-            <div class="col-5">
-                <h4>{{ name }}</h4>
-                <div class="image mb-2">
-                    <span class="tag">{{ imageDisplay }}</span>
-                </div>
-                <div v-if="!isEditMode">
-                    <span class="badge me-1" :class="bgStyle">{{ status }}</span>
-
-                    <a v-for="port in (envsubstService.ports || [])" :key="port" :href="parsePort(port).url" target="_blank">
-                        <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
-                    </a>
-                </div>
-            </div>
-            <div class="col-7">
-                <div class="function">
-                    <div class="btn-group me-2" role="group">
-                        <router-link v-if="!isEditMode && (status === 'running' || status === 'healthy')" class="btn btn-normal" :to="terminalRouteLink" disabled="">
-                            <font-awesome-icon icon="terminal" />
-                            Bash
-                        </router-link>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && status !== 'running' && status !== 'healthy'"
-                            class="btn btn-primary"
-                            :disabled="processing"
-                            @click="startService"
-                        >
-                            <font-awesome-icon icon="play" class="me-1" />
-                            {{ $t("startStack") }}
-                        </button>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
-                            class="btn btn-normal"
-                            :disabled="processing"
-                            @click="restartService"
-                        >
-                            <font-awesome-icon icon="rotate" class="me-1" />
-                            {{ $t("restartStack") }}
-                        </button>
-                        <button
-                            v-if="serviceCount > 1 && !isEditMode && (status === 'running' || status === 'healthy' || status === 'unhealthy')"
-                            class="btn btn-normal"
-                            :disabled="processing"
-                            @click="stopService"
-                        >
-                            <font-awesome-icon icon="stop" class="me-1" />
-                            {{ $t("stopStack") }}
-                        </button>
-                    </div>
-                </div>
-            </div>
+    <div :id="'service-' + encodeURIComponent(name)" class="shadow-box mb-3 service-card">
+        <div class="title-row">
+            <h4 class="title-text">
+                <router-link v-if="serviceStatus.length > 0" class="title-link" :to="containerDetailsRoute(serviceStatus[0])">
+                    <span>{{ name }}</span>
+                </router-link>
+                <span v-else>{{ name }}</span>
+                <span class="entity-label">{{ $t("service") }}</span>
+            </h4>
+            <ActionGroup
+                class="title-actions"
+                size="sm"
+                :actions="serviceActions"
+                :max-visible="3"
+                :aria-label="$t('serviceActions')"
+                @select="onServiceAction"
+            />
         </div>
 
-        <div v-if="isEditMode" class="mt-2">
-            <button class="btn btn-normal me-2" @click="showConfig = !showConfig">
-                <font-awesome-icon icon="edit" />
-                {{ $t("Edit") }}
-            </button>
-            <button v-if="false" class="btn btn-normal me-2">Rename</button>
-            <button class="btn btn-danger me-2" @click="remove">
-                <font-awesome-icon icon="trash" />
-                {{ $t("deleteContainer") }}
-            </button>
+        <div class="image mb-2">
+            <span class="tag" :title="imageDisplay">{{ imageDisplay }}</span>
         </div>
-        <div v-else-if="serviceStatus.length > 0" class="container-instances mt-3">
+        <div class="service-meta">
+            <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+            <a v-for="port in (envsubstService.ports || [])" :key="port" :href="parsePort(port).url" target="_blank">
+                <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
+            </a>
+        </div>
+
+        <div v-if="serviceStatus.length > 0" class="container-instances mt-3">
             <div v-for="instance in serviceStatus" :key="instance.name" class="instance-row">
-                <div class="instance-summary">
-                    <div class="instance-name">{{ instance.name }}</div>
-                    <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
-                        <span class="badge" :class="instanceStatusClass(instance)">{{ instance.status }}</span>
-                        <span v-if="dockerStats[instance.name]" class="stats">
-                            {{ $t("CPU") }}: {{ dockerStats[instance.name].CPUPerc }}
-                        </span>
-                        <span v-if="dockerStats[instance.name]" class="stats">
-                            {{ $t("memoryAbbreviated") }}: {{ dockerStats[instance.name].MemUsage }}
-                        </span>
+                <div class="title-row">
+                    <div class="instance-name title-text">
+                        <span class="instance-branch" aria-hidden="true">↳</span>
+                        <router-link class="title-link" :to="containerDetailsRoute(instance)">
+                            <span>{{ instance.name }}</span>
+                        </router-link>
+                        <span class="entity-label">{{ $tc("container", 1) }}</span>
                     </div>
                 </div>
-                <div class="instance-actions btn-group" role="group">
-                    <router-link class="btn btn-sm btn-normal" :to="containerDetailsRoute(instance)">
-                        <font-awesome-icon icon="info-circle" class="me-1" /> {{ $t("details") }}
-                    </router-link>
-                    <router-link class="btn btn-sm btn-normal" :to="containerDetailsRoute(instance, 'logs')">
-                        <font-awesome-icon icon="list" class="me-1" /> {{ $t("logs") }}
-                    </router-link>
+                <div class="d-flex flex-wrap align-items-center gap-2 mt-1">
+                    <span class="badge" :class="instanceStatusClass(instance)">{{ instance.status }}</span>
+                    <span v-if="dockerStats[instance.name]" class="stats">
+                        {{ $t("CPU") }}: {{ dockerStats[instance.name].CPUPerc }}
+                    </span>
+                    <span v-if="dockerStats[instance.name]" class="stats">
+                        {{ $t("memoryAbbreviated") }}: {{ dockerStats[instance.name].MemUsage }}
+                    </span>
                 </div>
             </div>
         </div>
 
-        <transition name="slide-fade" appear>
-            <div v-if="isEditMode && showConfig" class="config mt-3">
-                <!-- Image -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dockerImage") }}
-                    </label>
-                    <div class="input-group mb-3">
-                        <input
-                            v-model="service.image"
-                            class="form-control"
-                            list="image-datalist"
-                        />
-                    </div>
-
-                    <!-- TODO: Search online: https://hub.docker.com/api/content/v1/products/search?q=louislam%2Fuptime&source=community&page=1&page_size=4 -->
-                    <datalist id="image-datalist">
-                        <option value="louislam/uptime-kuma:1" />
-                    </datalist>
-                    <div class="form-text"></div>
-                </div>
-
-                <!-- Ports -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("port", 2) }}
-                    </label>
-                    <ArrayInput name="ports" :display-name="$t('port')" placeholder="HOST:CONTAINER" />
-                </div>
-
-                <!-- Volumes -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("volume", 2) }}
-                    </label>
-                    <ArrayInput name="volumes" :display-name="$t('volume')" placeholder="HOST:CONTAINER" />
-                </div>
-
-                <!-- Restart Policy -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("restartPolicy") }}
-                    </label>
-                    <select v-model="service.restart" class="form-select">
-                        <option value="always">{{ $t("restartPolicyAlways") }}</option>
-                        <option value="unless-stopped">{{ $t("restartPolicyUnlessStopped") }}</option>
-                        <option value="on-failure">{{ $t("restartPolicyOnFailure") }}</option>
-                        <option value="no">{{ $t("restartPolicyNo") }}</option>
-                    </select>
-                </div>
-
-                <!-- Environment Variables -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("environmentVariable", 2) }}
-                    </label>
-                    <ArrayInput name="environment" :display-name="$t('environmentVariable')" placeholder="KEY=VALUE" />
-                </div>
-
-                <!-- Container Name -->
-                <div v-if="false" class="mb-4">
-                    <label class="form-label">
-                        {{ $t("containerName") }}
-                    </label>
-                    <div class="input-group mb-3">
-                        <input
-                            v-model="service.container_name"
-                            class="form-control"
-                        />
-                    </div>
-                    <div class="form-text"></div>
-                </div>
-
-                <!-- Network -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("network", 2) }}
-                    </label>
-
-                    <div v-if="networkList.length === 0 && service.networks && service.networks.length > 0" class="text-warning mb-3">
-                        {{ $t("NoNetworksAvailable") }}
-                    </div>
-
-                    <ArraySelect name="networks" :display-name="$t('network')" placeholder="Network Name" :options="networkList" />
-                </div>
-
-                <!-- Depends on -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dependsOn") }}
-                    </label>
-                    <ArrayInput name="depends_on" :display-name="$t('dependsOn')" :placeholder="$t(`containerName`)" />
-                </div>
+        <FloatingDialog
+            v-model="showActionDialog"
+            size="sm"
+            :title="$t(actionConfirm.title)"
+            :ok-title="$t(actionConfirm.ok)"
+            :cancel-title="$t('cancel')"
+            :ok-variant="actionConfirm.variant"
+            :busy="processing"
+            @ok="confirmServiceAction"
+            @hidden="clearPendingAction"
+        >
+            <p class="mb-2">{{ $t(actionConfirm.message, { name }) }}</p>
+            <div v-if="actionConfirm.commands?.length" class="action-commands">
+                <pre><code v-for="(cmd, i) in actionConfirm.commands" :key="i"><span class="action-command-prompt">$</span> {{ cmd }}</code></pre>
             </div>
-        </transition>
+        </FloatingDialog>
     </div>
 </template>
 
 <script>
 import { defineComponent } from "vue";
-import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import ActionGroup from "./ActionGroup.vue";
+import { FloatingDialog } from "./floating";
 import { parseDockerPort } from "../../../common/util-common";
+
+/**
+ * Confirmation copy + compose command for each service control.
+ * `command` is a template; `{service}` is replaced with the service name.
+ */
+const SERVICE_ACTIONS = {
+    start: {
+        title: "startServiceConfirmTitle",
+        message: "startServiceConfirmMsg",
+        ok: "startStack",
+        variant: "btn-primary",
+        command: "docker compose up -d {service}",
+        emit: "start-service",
+    },
+    stop: {
+        title: "stopServiceConfirmTitle",
+        message: "stopServiceConfirmMsg",
+        ok: "stopStack",
+        variant: "btn-warning",
+        command: "docker compose stop {service}",
+        emit: "stop-service",
+    },
+    restart: {
+        title: "restartServiceConfirmTitle",
+        message: "restartServiceConfirmMsg",
+        ok: "restartStack",
+        variant: "btn-primary",
+        command: "docker compose restart {service}",
+        emit: "restart-service",
+    },
+};
 
 export default defineComponent({
     components: {
-        FontAwesomeIcon
+        ActionGroup,
+        FloatingDialog,
     },
     props: {
         name: {
             type: String,
             required: true,
-        },
-        isEditMode: {
-            type: Boolean,
-            default: false,
-        },
-        first: {
-            type: Boolean,
-            default: false,
         },
         serviceStatus: {
             type: Array,
@@ -229,18 +137,11 @@ export default defineComponent({
     ],
     data() {
         return {
-            showConfig: false,
+            showActionDialog: false,
+            pendingAction: null,
         };
     },
     computed: {
-
-        networkList() {
-            let list = [];
-            for (const networkName in (this.jsonObject.networks || {})) {
-                list.push(networkName);
-            }
-            return list;
-        },
 
         bgStyle() {
             if (this.status === "running" || this.status === "healthy") {
@@ -250,6 +151,62 @@ export default defineComponent({
             } else {
                 return "bg-secondary";
             }
+        },
+
+        isRunning() {
+            return this.status === "running" || this.status === "healthy" || this.status === "unhealthy";
+        },
+
+        canOpenBash() {
+            return this.status === "running" || this.status === "healthy";
+        },
+
+        processing() {
+            return !!this.$parent?.$parent?.processing;
+        },
+
+        /**
+         * Service controls for the title ActionGroup.
+         * @returns {object[]}
+         */
+        serviceActions() {
+            if (this.isRunning) {
+                return [
+                    { key: "restart",
+                        i18nKey: "restartStack",
+                        icon: "rotate",
+                        variant: "btn-normal" },
+                    { key: "stop",
+                        i18nKey: "stopStack",
+                        icon: "stop",
+                        variant: "btn-warning" },
+                    { key: "bash",
+                        label: "Bash",
+                        icon: "terminal",
+                        variant: "btn-normal",
+                        hidden: !this.canOpenBash },
+                ];
+            }
+
+            return [
+                { key: "start",
+                    i18nKey: "startStack",
+                    icon: "play",
+                    variant: "btn-primary" },
+            ];
+        },
+
+        /**
+         * Copy + command for the pending service action confirm dialog.
+         * @returns {{ title: string, message: string, ok: string, variant: string, commands: string[], emit: string }}
+         */
+        actionConfirm() {
+            const base = SERVICE_ACTIONS[this.pendingAction] ?? SERVICE_ACTIONS.start;
+            const command = base.command.replaceAll("{service}", this.name);
+            return {
+                ...base,
+                commands: [ command ],
+            };
         },
 
         terminalRouteLink() {
@@ -287,17 +244,6 @@ export default defineComponent({
             return this.$parent.$parent.stack.name;
         },
 
-        service() {
-            if (!this.jsonObject.services || !this.jsonObject.services[this.name]) {
-                return {};
-            }
-            return this.jsonObject.services[this.name];
-        },
-
-        jsonObject() {
-            return this.$parent.$parent.jsonConfig;
-        },
-
         envsubstJSONConfig() {
             return this.$parent.$parent.envsubstJSONConfig;
         },
@@ -317,14 +263,22 @@ export default defineComponent({
                 return "N/A";
             }
             return this.serviceStatus[0].status;
-        }
+        },
+    },
+    watch: {
+        "$route.hash"() {
+            this.scrollToService();
+        },
     },
     mounted() {
-        if (this.first) {
-            //this.showConfig = true;
-        }
+        this.scrollToService();
     },
     methods: {
+        scrollToService() {
+            if (this.$route.hash === "#service-" + encodeURIComponent(this.name)) {
+                this.$nextTick(() => this.$el.scrollIntoView({ block: "nearest" }));
+            }
+        },
         parsePort(port) {
             if (this.stack.endpoint) {
                 return parseDockerPort(port, this.stack.primaryHostname);
@@ -333,17 +287,29 @@ export default defineComponent({
                 return parseDockerPort(port, hostname);
             }
         },
-        remove() {
-            delete this.jsonObject.services[this.name];
+        onServiceAction(key) {
+            if (key === "bash") {
+                this.$router.push(this.terminalRouteLink);
+                return;
+            }
+            if (this.processing || !SERVICE_ACTIONS[key]) {
+                return;
+            }
+            this.pendingAction = key;
+            this.showActionDialog = true;
         },
-        startService() {
-            this.$emit("start-service", this.name);
+        confirmServiceAction() {
+            if (this.processing || !this.pendingAction) {
+                return;
+            }
+            const action = SERVICE_ACTIONS[this.pendingAction];
+            this.showActionDialog = false;
+            if (action) {
+                this.$emit(action.emit, this.name);
+            }
         },
-        stopService() {
-            this.$emit("stop-service", this.name);
-        },
-        restartService() {
-            this.$emit("restart-service", this.name);
+        clearPendingAction() {
+            this.pendingAction = null;
         },
         containerDetailsRoute(instance, tab) {
             const route = {
@@ -375,79 +341,144 @@ export default defineComponent({
 <style scoped lang="scss">
 @import "../styles/vars";
 
-.container {
-    .image {
-        font-size: 0.8rem;
-        color: #6c757d;
-        .tag {
-            color: var(--bs-heading-color);
+.service-card {
+    width: 100%;
+    // Match editor-box toolbar padding so the service title sits on the
+    // same line as `compose.yaml`.
+    padding: 0.55rem 0.75rem 1.25rem;
+
+    .title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-height: 28px;
+        margin-bottom: 0.25rem;
+        flex-wrap: nowrap;
+    }
+
+    .title-text {
+        margin: 0;
+        min-width: 0;
+        flex: 1 1 auto;
+        line-height: 1.25;
+    }
+
+    h4.title-text {
+        font-size: 1.25rem;
+    }
+
+    .title-link {
+        color: inherit;
+        text-decoration: none;
+        overflow-wrap: anywhere;
+        border-radius: 0.2rem;
+        transition: color 0.15s ease;
+
+        &:hover,
+        &:focus-visible {
+            color: $primary;
+            text-decoration: none;
+        }
+
+        &:focus-visible {
+            outline: 2px solid currentColor;
+            outline-offset: 3px;
         }
     }
 
-    .function {
-        align-content: center;
+    .title-actions {
+        flex: 1 1 140px;
+        min-width: 38px;
+        max-width: 65%;
+        justify-content: flex-end;
+    }
+
+    .image {
+        word-break: break-all;
+        font-size: 0.9rem;
+        color: $dark-font-color3;
+    }
+
+    .service-meta {
         display: flex;
-        height: 100%;
-        width: 100%;
+        flex-wrap: wrap;
+        gap: 0.35rem 0.5rem;
         align-items: center;
-        justify-content: end;
     }
 
     .stats {
         font-size: 0.8rem;
-        color: #6c757d;
+        color: $dark-font-color3;
+    }
+
+    .entity-label {
+        margin-inline-start: 0.35rem;
+        font-family: var(--bs-body-font-family);
+        font-size: 0.75rem;
+        font-weight: normal;
+        text-transform: lowercase;
+        opacity: 0.5;
+        user-select: none;
+    }
+
+    h4 .entity-label {
+        font-size: 0.875rem;
     }
 
     .container-instances {
-        border-top: 1px solid $dark-border-color;
-    }
-
-    .instance-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
-        padding-top: 0.85rem;
+        padding-inline-start: 1rem;
     }
 
     .instance-name {
-        overflow-wrap: anywhere;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.9rem;
+        position: relative;
     }
 
-    @media (max-width: 575.98px) {
-        > .row > [class*="col-"] {
-            width: 100%;
-        }
+    .instance-branch {
+        position: absolute;
+        inset-inline-start: -1rem;
+        opacity: 0.5;
+        user-select: none;
+    }
 
-        .function {
-            justify-content: flex-start;
-            margin-top: 0.75rem;
-        }
+    .instance-row + .instance-row {
+        padding-top: 0.65rem;
+    }
 
-        .function .btn-group {
-            display: flex;
-            flex-wrap: wrap;
-            width: 100%;
-        }
+    .instance-row .instance-name {
+        color: var(--bs-heading-color);
+        font-size: 0.9rem;
+    }
+}
 
-        .function .btn {
-            flex: 1 1 auto;
-        }
+.action-commands {
+    margin-top: 0.75rem;
 
-        .instance-row {
-            align-items: stretch;
-            flex-direction: column;
-        }
+    pre {
+        margin: 0;
+        padding: 0.65rem 0.75rem;
+        border-radius: 0.35rem;
+        background: rgba(0, 0, 0, 0.28);
+        overflow-x: auto;
+    }
 
-        .instance-actions {
-            display: flex;
-        }
+    code {
+        display: block;
+        padding: 0;
+        color: $dark-font-color;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.8rem;
+        line-height: 1.45;
+        white-space: pre;
+        background: transparent;
+    }
 
-        .instance-actions .btn {
-            flex: 1;
-        }
+    code + code {
+        margin-top: 0.15rem;
+    }
+
+    .action-command-prompt {
+        color: #7ee787;
     }
 }
 </style>
