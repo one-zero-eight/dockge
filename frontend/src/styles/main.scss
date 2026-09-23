@@ -868,5 +868,95 @@ code {
     outline: none !important;
 }
 
+// Compose YAML schema hints and completions. These tooltips may be mounted
+// outside the editor, so scope by their dedicated classes rather than .editor-box.
+.cm-tooltip.cm-tooltip-hover:has(.cm-compose-hover),
+.cm-tooltip.cm-compose-completions,
+.cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    width: min(360px, calc(100vw - 24px));
+    max-width: min(360px, calc(100vw - 24px));
+    border: 1px solid #c9d2dc;
+    border-radius: 8px;
+    background: #fff;
+    color: #202c39;
+    box-shadow: 0 10px 30px rgba(7, 10, 16, 0.2);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.cm-tooltip.cm-tooltip-hover .cm-compose-hover,
+.cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    padding: 10px 12px;
+}
+
+.cm-compose-hover {
+    max-height: min(240px, 50vh);
+    overflow: auto;
+    overflow-wrap: anywhere;
+    white-space: normal;
+}
+
+.cm-compose-hover-text {
+    margin: 0 0 8px;
+}
+
+.cm-compose-hover-text:last-child {
+    margin-bottom: 0;
+}
+
+.cm-compose-hover code {
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(116, 194, 255, 0.12);
+    color: inherit;
+    font-family: inherit;
+    font-size: 0.93em;
+}
+
+.cm-tooltip.cm-compose-completions {
+    min-width: 200px;
+    overflow: hidden;
+}
+
+.cm-tooltip.cm-compose-completions > ul {
+    max-height: min(260px, 45vh);
+    font-family: inherit;
+}
+
+.cm-tooltip.cm-compose-completions > ul > li {
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.cm-tooltip.cm-compose-completions > ul > li[aria-selected] {
+    background: rgba(116, 194, 255, 0.18);
+    color: inherit;
+}
+
+.cm-tooltip.cm-compose-completions .cm-completionMatchedText {
+    color: #1375ab;
+    text-decoration: none;
+    font-weight: 650;
+}
+
+.dark .cm-tooltip.cm-tooltip-hover:has(.cm-compose-hover),
+.dark .cm-tooltip.cm-compose-completions,
+.dark .cm-tooltip.cm-completionInfo:has(.cm-compose-hover) {
+    border-color: $dark-border-color;
+    background: $dark-header-bg;
+    color: #dce5ef;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.dark .cm-tooltip.cm-compose-completions > ul > li[aria-selected] {
+    background: rgba(116, 194, 255, 0.2);
+    color: #e7f4ff;
+}
+
+.dark .cm-tooltip.cm-compose-completions .cm-completionMatchedText {
+    color: $highlight;
+}
+
 // Localization
 @import "localization.scss";

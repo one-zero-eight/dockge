@@ -15,6 +15,15 @@ export default defineConfig({
         "FRONTEND_VERSION": JSON.stringify(process.env.npm_package_version),
     },
     root: "./frontend",
+    resolve: {
+        alias: {
+            // yaml-language-server imports Node's path; browser workers need a polyfill.
+            path: "path-browserify",
+        },
+    },
+    worker: {
+        format: "es",
+    },
     build: {
         outDir: "../frontend-dist",
     },

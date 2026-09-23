@@ -1,15 +1,15 @@
 <template>
     <div class="stack-tree" :class="{ dim: !stack.isManagedByDockge }">
-        <div class="stack-row" :class="{ selected: $route.path === url && !$route.hash }" @click.self="$event.detail <= 1 && changeCollapsed()" @dblclick.prevent="$event.target !== $event.currentTarget && changeCollapsed()">
-            <button class="tree-toggle" :aria-expanded="!isCollapsed" :aria-label="stackName" @click="$event.detail <= 1 && changeCollapsed()" @dblclick.stop.prevent>
+        <div class="stack-row" :class="{ selected: $route.path === url && !$route.hash }" @click.self="stack.isManagedByDockge && $event.detail <= 1 && changeCollapsed()" @dblclick.prevent="stack.isManagedByDockge && $event.target !== $event.currentTarget && changeCollapsed()">
+            <button class="tree-toggle" :class="{ 'unmanaged-toggle': !stack.isManagedByDockge }" :disabled="!stack.isManagedByDockge" :aria-expanded="stack.isManagedByDockge ? !isCollapsed : undefined" :aria-label="stackName" @click="$event.detail <= 1 && changeCollapsed()" @dblclick.stop.prevent>
                 <font-awesome-icon icon="chevron-down" :class="{ collapsed: isCollapsed }" />
             </button>
             <router-link :to="url" class="stack-link">
-                <font-awesome-icon icon="layer-group" class="node-icon" :class="stack.status === RUNNING ? 'text-primary' : 'text-secondary'" />
+                <font-awesome-icon icon="layer-group" class="node-icon" :class="`text-${statusColor(stack.status)}`" :title="stackStatusLabel(stack)" :aria-label="stackStatusLabel(stack)" />
                 <span class="node-name" :title="stackName">{{ stackName }}</span>
             </router-link>
         </div>
-        <ul v-if="!isCollapsed" class="tree-children">
+        <ul v-if="stack.isManagedByDockge && !isCollapsed" class="tree-children">
             <li v-if="loading" class="tree-message">{{ $t("loading") }}</li>
             <li v-else-if="error" class="tree-message text-danger" role="alert">{{ error }}</li>
             <li v-else-if="services.length === 0" class="tree-message">{{ $t("noServices") }}</li>
@@ -38,7 +38,7 @@
 
 <script>
 import { parse } from "yaml";
-import { RUNNING } from "../../../common/util-common";
+import { statusColor, stackStatusLabel } from "../../../common/util-common";
 
 export default {
     props: {
@@ -75,7 +75,8 @@ export default {
     },
     data() {
         return {
-            RUNNING,
+            statusColor,
+            stackStatusLabel,
             isCollapsed: true,
             collapsedServices: new Set(),
             services: [],
@@ -117,6 +118,9 @@ export default {
     },
     methods: {
         changeCollapsed() {
+            if (!this.stack.isManagedByDockge) {
+                return;
+            }
             this.isCollapsed = !this.isCollapsed;
             this.requestVersion++;
             clearTimeout(this.refreshTimer);
@@ -258,8 +262,13 @@ export default {
     color: inherit;
     font-size: 0.8rem;
 
-    &:disabled {
+    &:disabled:not(.unmanaged-toggle) {
         visibility: hidden;
+    }
+
+    &.unmanaged-toggle:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
     }
 }
 

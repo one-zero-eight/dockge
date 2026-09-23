@@ -9,8 +9,8 @@ import {
     COMBINED_TERMINAL_COLS,
     COMBINED_TERMINAL_ROWS,
     CREATED_FILE,
-    CREATED_STACK,
-    EXITED, getCombinedTerminalName,
+    composeStatusToStatus,
+    getCombinedTerminalName,
     getComposeTerminalName, getContainerExecTerminalName, getContainerInstanceExecTerminalName,
     getContainerLogTerminalName,
     RUNNING, TERMINAL_COLS, TERMINAL_ROWS,
@@ -24,15 +24,15 @@ export class Stack {
 
     name: string;
     protected _status: number = UNKNOWN;
+    protected _composeStatus?: string;
     protected _composeYAML?: string;
     protected _composeENV?: string;
     protected _configFilePath?: string;
+    protected _projectDir?: string;
     protected _composeFileName: string = "compose.yaml";
     protected server: DockgeServer;
 
     protected combinedTerminal? : Terminal;
-
-    protected static managedStackList: Map<string, Stack> = new Map();
 
     constructor(server : DockgeServer, name : string, composeYAML? : string, composeENV? : string, skipFSOperations = false) {
         this.name = name;
@@ -82,6 +82,7 @@ export class Stack {
         return {
             name: this.name,
             status: this._status,
+            composeStatus: this._composeStatus,
             tags: [],
             isManagedByDockge: this.isManagedByDockge,
             composeFileName: this._composeFileName,
@@ -103,8 +104,19 @@ export class Stack {
         return JSON.parse(res.stdout.toString());
     }
 
+    static isPathInside(parent : string, child : string) : boolean {
+        const relative = path.relative(path.resolve(parent), path.resolve(child));
+        return relative !== "" && !relative.startsWith(".." + path.sep) && relative !== ".." && !path.isAbsolute(relative);
+    }
+
     get isManagedByDockge() : boolean {
-        return fs.existsSync(this.path) && fs.statSync(this.path).isDirectory();
+        const stackDir = path.resolve(this.server.stacksDir);
+        const projectDir = this.fullPath;
+        const relative = path.relative(stackDir, projectDir);
+        return relative !== "" && !relative.startsWith(".." + path.sep) && relative !== ".."
+            && !path.isAbsolute(relative) && fs.existsSync(projectDir) && fs.statSync(projectDir).isDirectory()
+            && acceptedComposeFileNames.includes(this._composeFileName)
+            && fs.existsSync(path.join(projectDir, this._composeFileName));
     }
 
     get status() : number {
@@ -113,7 +125,7 @@ export class Stack {
 
     validate() {
         // Check name, allows [a-z][0-9] _ - only
-        if (!this.name.match(/^[a-z0-9_-]+$/)) {
+        if (!this.name.match(/^[a-z0-9][a-z0-9_-]*$/)) {
             throw new ValidationError("Project name can only contain [a-z][0-9] _ - only");
         }
 
@@ -128,6 +140,11 @@ export class Stack {
         if (lines.length === 1 && !lines[0].includes("=") && lines[0].length > 0) {
             throw new ValidationError("Invalid .env format");
         }
+    }
+
+    setComposeContent(composeYAML : string, composeENV : string) {
+        this._composeYAML = composeYAML;
+        this._composeENV = composeENV;
     }
 
     get composeYAML() : string {
@@ -153,7 +170,7 @@ export class Stack {
     }
 
     get path() : string {
-        return path.join(this.server.stacksDir, this.name);
+        return this._projectDir ?? path.join(this.server.stacksDir, this.name);
     }
 
     get fullPath() : string {
@@ -176,21 +193,32 @@ export class Stack {
      * @param isAdd
      */
     async save(isAdd : boolean) {
-        this.validate();
-
         let dir = this.path;
 
-        // Check if the name is used if isAdd
+        if (isAdd) {
+            const folderName = this.name.trim();
+            if (!folderName || folderName === "." || folderName === ".." || /[/\\\0]/.test(folderName)) {
+                throw new ValidationError("Invalid project folder name");
+            }
+            dir = path.join(this.server.stacksDir, folderName);
+            const declaredName = yaml.parse(this.composeYAML)?.name;
+            const derivedName = folderName.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
+            this.name = typeof declaredName === "string" ? declaredName : /^[a-z0-9]/.test(derivedName) ? derivedName : "p" + derivedName;
+            this._projectDir = path.resolve(dir);
+        }
+        this.validate();
+
         if (isAdd) {
             if (await fileExists(dir)) {
-                throw new ValidationError("Project name already exists");
+                throw new ValidationError("Project folder already exists");
             }
-
-            // Create the stack folder
+            if ((await Stack.getStackList(this.server)).has(this.name)) {
+                throw new ValidationError("Compose project name already exists");
+            }
             await fsAsync.mkdir(dir);
         } else {
-            if (!await fileExists(dir)) {
-                throw new ValidationError("Project not found");
+            if (!this.isManagedByDockge || !await fileExists(dir)) {
+                throw new ValidationError("Project is not managed by Dockge");
             }
         }
 
@@ -220,112 +248,89 @@ export class Stack {
             throw new Error("Failed to delete, please check the terminal output for more information.");
         }
 
-        // Remove the stack folder
-        await fsAsync.rm(this.path, {
-            recursive: true,
-            force: true
-        });
+        // The compose file can back several -p projects. Removing one must
+        // not delete the configuration used by the others.
+        const remaining = await Stack.getStackList(this.server);
+        const composeFile = path.join(this.fullPath, this._composeFileName);
+        if (![ ...remaining.values() ].some(stack => stack.name !== this.name
+            && path.join(stack.fullPath, stack._composeFileName) === composeFile)) {
+            await fsAsync.rm(this.path, {
+                recursive: true,
+                force: true
+            });
+        }
 
         return exitCode;
     }
 
     async updateStatus() {
         let statusList = await Stack.getStatusList();
-        let status = statusList.get(this.name);
-
-        if (status) {
-            this._status = status;
-        } else {
-            this._status = UNKNOWN;
-        }
+        const entry = statusList.get(this.name);
+        this._status = entry?.status ?? UNKNOWN;
+        this._composeStatus = entry?.composeStatus;
     }
 
-    /**
-     * Checks if a compose file exists in the specified directory.
-     * @async
-     * @static
-     * @param {string} stacksDir - The directory of the stack.
-     * @param {string} filename - The name of the directory to check for the compose file.
-     * @returns {Promise<boolean>} A promise that resolves to a boolean indicating whether any compose file exists.
-     */
-    static async composeFileExists(stacksDir : string, filename : string) : Promise<boolean> {
-        let filenamePath = path.join(stacksDir, filename);
-        // Check if any compose file exists
-        for (const filename of acceptedComposeFileNames) {
-            let composeFile = path.join(filenamePath, filename);
-            if (await fileExists(composeFile)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    static async getStackList(server : DockgeServer, useCacheForManaged = false) : Promise<Map<string, Stack>> {
-        let stacksDir = server.stacksDir;
-        let stackList : Map<string, Stack>;
-
-        // Use cached stack list?
-        if (useCacheForManaged && this.managedStackList.size > 0) {
-            stackList = this.managedStackList;
-        } else {
-            stackList = new Map<string, Stack>();
-
-            // Scan the stacks directory, and get the stack list
-            let filenameList = await fsAsync.readdir(stacksDir);
-
-            for (let filename of filenameList) {
-                try {
-                    // Check if it is a directory
-                    let stat = await fsAsync.stat(path.join(stacksDir, filename));
-                    if (!stat.isDirectory()) {
-                        continue;
-                    }
-                    // If no compose file exists, skip it
-                    if (!await Stack.composeFileExists(stacksDir, filename)) {
-                        continue;
-                    }
-                    let stack = await this.getStack(server, filename);
-                    stack._status = CREATED_FILE;
-                    stackList.set(filename, stack);
-                } catch (e) {
-                    if (e instanceof Error) {
-                        log.warn("getStackList", `Failed to get stack ${filename}, error: ${e.message}`);
-                    }
-                }
-            }
-
-            // Cache by copying
-            this.managedStackList = new Map(stackList);
-        }
-
-        // Get status from docker compose ls
-        let res = await childProcessAsync.spawn("docker", [ "compose", "ls", "--all", "--format", "json" ], {
-            encoding: "utf-8",
-        });
-
-        if (!res.stdout) {
-            return stackList;
-        }
-
-        let composeList = JSON.parse(res.stdout.toString());
-
-        for (let composeStack of composeList) {
-            let stack = stackList.get(composeStack.Name);
-
-            // This stack probably is not managed by Dockge, but we still want to show it
-            if (!stack) {
-                // Skip the dockge stack if it is not managed by Dockge
-                if (composeStack.Name === "dockge") {
+    static async getStackList(server : DockgeServer) : Promise<Map<string, Stack>> {
+        const byFile = new Map<string, Stack>();
+        for (const folder of await fsAsync.readdir(server.stacksDir)) {
+            try {
+                const projectDir = path.resolve(server.stacksDir, folder);
+                if (!(await fsAsync.stat(projectDir)).isDirectory()) {
                     continue;
                 }
-                stack = new Stack(server, composeStack.Name);
-                stackList.set(composeStack.Name, stack);
+                const composeFile = acceptedComposeFileNames.find(filename => fs.existsSync(path.join(projectDir, filename)));
+                if (!composeFile) {
+                    continue;
+                }
+                const stack = new Stack(server, folder);
+                stack._projectDir = projectDir;
+                stack._composeFileName = composeFile;
+                stack._status = CREATED_FILE;
+                try {
+                    const document = yaml.parse(stack.composeYAML);
+                    if (typeof document?.name === "string" && /^[a-z0-9][a-z0-9_-]*$/.test(document.name)) {
+                        stack.name = document.name;
+                    }
+                } catch {
+                    // Unfinished drafts remain visible and editable.
+                }
+                byFile.set(path.join(projectDir, composeFile), stack);
+            } catch (e) {
+                log.warn("getStackList", `Failed to read project folder ${folder}: ${e instanceof Error ? e.message : e}`);
             }
-
-            stack._status = this.statusConvert(composeStack.Status);
-            stack._configFilePath = composeStack.ConfigFiles;
         }
 
+        const result = await childProcessAsync.spawn("docker", [ "compose", "ls", "--all", "--format", "json" ], {
+            encoding: "utf-8",
+        });
+        const composeList : { Name : string, Status : string, ConfigFiles : string }[] = result.stdout
+            ? JSON.parse(result.stdout.toString()) : [];
+        const stackList = new Map<string, Stack>();
+        for (const project of composeList) {
+            const configFile = typeof project.ConfigFiles === "string" ? project.ConfigFiles.split(",")[0].trim() : "";
+            if (!configFile) {
+                continue;
+            }
+            const file = path.resolve(configFile);
+            if (project.Name === "dockge" && !Stack.isPathInside(server.stacksDir, file)) {
+                continue;
+            }
+            const stack = new Stack(server, project.Name, undefined, undefined, true);
+            stack._projectDir = path.dirname(file);
+            stack._composeFileName = path.basename(file);
+            stack._status = this.statusConvert(project.Status);
+            stack._composeStatus = project.Status;
+            stackList.set(project.Name, stack);
+            byFile.delete(file);
+        }
+
+        for (const stack of byFile.values()) {
+            if (stackList.has(stack.name)) {
+                log.warn("getStackList", `Compose project name "${stack.name}" already exists; cannot show draft ${path.join(stack.fullPath, stack._composeFileName)}`);
+                continue;
+            }
+            stackList.set(stack.name, stack);
+        }
         return stackList;
     }
 
@@ -333,8 +338,8 @@ export class Stack {
      * Get the status list, it will be used to update the status of the stacks
      * Not all status will be returned, only the stack that is deployed or created to `docker compose` will be returned
      */
-    static async getStatusList() : Promise<Map<string, number>> {
-        let statusList = new Map<string, number>();
+    static async getStatusList() : Promise<Map<string, { status: number; composeStatus: string }>> {
+        const statusList = new Map<string, { status: number; composeStatus: string }>();
 
         let res = await childProcessAsync.spawn("docker", [ "compose", "ls", "--all", "--format", "json" ], {
             encoding: "utf-8",
@@ -347,7 +352,10 @@ export class Stack {
         let composeList = JSON.parse(res.stdout.toString());
 
         for (let composeStack of composeList) {
-            statusList.set(composeStack.Name, this.statusConvert(composeStack.Status));
+            statusList.set(composeStack.Name, {
+                status: this.statusConvert(composeStack.Status),
+                composeStatus: composeStack.Status,
+            });
         }
 
         return statusList;
@@ -359,62 +367,32 @@ export class Stack {
      * @param status
      */
     static statusConvert(status : string) : number {
-        if (status.startsWith("created")) {
-            return CREATED_STACK;
-        } else if (status.includes("exited")) {
-            // If one of the service is exited, we consider the stack is exited
-            return EXITED;
-        } else if (status.startsWith("running")) {
-            // If there is no exited services, there should be only running services
-            return RUNNING;
-        } else {
-            return UNKNOWN;
-        }
+        return composeStatusToStatus(status);
     }
 
-    static async getStack(server: DockgeServer, stackName: string, skipFSOperations = false) : Promise<Stack> {
-        let dir = path.join(server.stacksDir, stackName);
-
-        if (!skipFSOperations) {
-            if (!await fileExists(dir) || !(await fsAsync.stat(dir)).isDirectory()) {
-                // Maybe it is a stack managed by docker compose directly
-                let stackList = await this.getStackList(server, true);
-                let stack = stackList.get(stackName);
-
-                if (stack) {
-                    return stack;
-                } else {
-                    // Really not found
-                    throw new ValidationError("Project not found");
-                }
-            }
-        } else {
-            //log.debug("getStack", "Skip FS operations");
+    static async getStack(server: DockgeServer, stackName: string) : Promise<Stack> {
+        // A Compose name may differ from the folder name; resolve the merged identity first.
+        const stackList = await this.getStackList(server);
+        const listedStack = stackList.get(stackName);
+        if (listedStack) {
+            return listedStack;
         }
-
-        let stack : Stack;
-
-        if (!skipFSOperations) {
-            stack = new Stack(server, stackName);
-        } else {
-            stack = new Stack(server, stackName, undefined, undefined, true);
-        }
-
-        stack._status = UNKNOWN;
-        stack._configFilePath = path.resolve(dir);
-        return stack;
+        throw new ValidationError("Project not found");
     }
 
     getComposeOptions(command : string, ...extraOptions : string[]) {
-        //--env-file ./../global.env --env-file .env
-        let options = [ "compose", command, ...extraOptions ];
-        if (fs.existsSync(path.join(this.server.stacksDir, "global.env"))) {
-            if (fs.existsSync(path.join(this.path, ".env"))) {
-                options.splice(1, 0, "--env-file", "./.env");
+        const projectDir = this.fullPath;
+        const options = [ "compose", "--project-directory", projectDir,
+            "-f", path.join(projectDir, this._composeFileName), "-p", this.name ];
+        const globalEnv = path.join(path.resolve(this.server.stacksDir), "global.env");
+        if (fs.existsSync(globalEnv)) {
+            options.push("--env-file", globalEnv);
+            const stackEnv = path.join(projectDir, ".env");
+            if (fs.existsSync(stackEnv)) {
+                options.push("--env-file", stackEnv);
             }
-            options.splice(1, 0, "--env-file", "../global.env");
         }
-        console.log(options);
+        options.push(command, ...extraOptions);
         return options;
     }
 

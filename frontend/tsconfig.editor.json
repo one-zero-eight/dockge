@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "target": "ESNext",
+        "strict": true,
+        "moduleResolution": "bundler",
+        "skipLibCheck": true,
+        "resolveJsonModule": true,
+        "lib": ["ESNext", "DOM", "WebWorker"],
+        "types": ["vite/client"],
+        "noEmit": true
+    },
+    "include": [
+        "src/editor/**/*.ts",
+        "src/vite-env.d.ts"
+    ],
+    "exclude": [
+        "src/editor/**/*.test.ts"
+    ]
+}

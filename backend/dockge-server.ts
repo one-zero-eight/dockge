@@ -421,7 +421,7 @@ export class DockgeServer {
                 protect: true,  // Enabled over-run protection.
             }, () => {
                 //log.debug("server", "Cron job running");
-                this.sendStackList(true);
+                this.sendStackList();
             });
 
             checkVersion.startInterval();
@@ -613,10 +613,9 @@ export class DockgeServer {
     }
 
     /**
-     * Send stack list to all connected sockets
-     * @param useCache
+     * Send stack list to all connected sockets.
      */
-    async sendStackList(useCache = false) {
+    async sendStackList() {
         let socketList = this.io.sockets.sockets.values();
 
         let stackList;
@@ -629,7 +628,7 @@ export class DockgeServer {
 
                 // Get the list only if there is a logged in user
                 if (!stackList) {
-                    stackList = await Stack.getStackList(this, useCache);
+                    stackList = await Stack.getStackList(this);
                 }
 
                 let map : Map<string, object> = new Map();

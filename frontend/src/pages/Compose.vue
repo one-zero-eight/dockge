@@ -7,7 +7,7 @@
             <div class="project-header mb-3">
                 <h1 v-if="isAdd" class="mb-0">{{ $t("compose") }}</h1>
                 <h1 v-else class="project-title mb-0">
-                    <Uptime :stack="globalStack" :pill="true" /> <span>{{ stack.name }}</span>
+                    <span class="project-status-dot" :class="`bg-${statusColor(globalStack?.status)}`" :title="stackStatusLabel(globalStack || stack)" :aria-label="stackStatusLabel(globalStack || stack)" role="img" /> <span>{{ stack.name }}</span>
                     <span class="stack-label opacity-50 user-select-none">{{ $t("project") }}</span>
                     <span v-if="$root.agentCount > 1 && endpoint !== ''" class="agent-name">
                         ({{ endpointDisplay }})
@@ -247,13 +247,16 @@ import CodeMirror from "vue-codemirror6";
 import { yaml } from "@codemirror/lang-yaml";
 import { dracula as editorTheme } from "thememirror";
 import { lineNumbers, EditorView } from "@codemirror/view";
-import { parseDocument, Document } from "yaml";
+import { parseDocument } from "yaml";
 
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { composeLanguageSupport } from "../editor/compose-language";
 import {
-    copyYAMLComments, envsubstYAML,
+    envsubstYAML,
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
+    statusColor,
+    stackStatusLabel,
     TERMINAL_COLS,
     RUNNING
 } from "../../../common/util-common";
@@ -356,6 +359,7 @@ export default {
         const extensions = [
             editorTheme,
             yaml(),
+            composeLanguageSupport(),
             lineNumbers(),
             EditorView.focusChangeEffect.of(focusEffectHandler)
         ];
@@ -363,7 +367,6 @@ export default {
         return { extensions,
             editorFocus };
     },
-    yamlDoc: null,  // For keeping the yaml comments
     data() {
         return {
             jsonConfig: {},
@@ -616,25 +619,6 @@ export default {
             deep: true,
         },
 
-        jsonConfig: {
-            handler() {
-                if (!this.editorFocus) {
-                    console.debug("jsonConfig changed");
-
-                    let doc = new Document(this.jsonConfig);
-
-                    // Stick back the yaml comments
-                    if (this.yamlDoc) {
-                        copyYAMLComments(doc, this.yamlDoc);
-                    }
-
-                    this.stack.composeYAML = doc.toString();
-                    this.yamlDoc = doc;
-                }
-            },
-            deep: true,
-        },
-
         $route(to, from) {
 
         }
@@ -681,6 +665,8 @@ export default {
         this.requestDockerStats();
     },
     methods: {
+        statusColor,
+        stackStatusLabel,
 
         startServiceStatusTimeout() {
             clearTimeout(serviceStatusTimeout);
@@ -916,10 +902,11 @@ export default {
             }
 
             this.runWithProgress("deployStack", () => {
-                this.$root.emitAgent(this.stack.endpoint, "deployStack", this.stack.name, this.stack.composeYAML, this.stack.composeENV, this.isAdd, (res) => {
+                this.$root.emitAgent(this.stack.endpoint, "deployStack", this.stack.name, this.composeEditorContent(), this.stack.composeENV, this.isAdd, (res) => {
                     this.finishProgress(res);
 
                     if (res.ok) {
+                        this.stack.name = res.name;
                         this.isEditMode = false;
                         this.clearProgressCloseTimer();
                         this.showProgressDialog = false;
@@ -929,6 +916,11 @@ export default {
             }, [ "docker compose up -d --remove-orphans" ]);
         },
 
+        /** Return the editor document verbatim, including comments and trailing newline. */
+        composeEditorContent() {
+            return this.$refs.editor?.view?.state.doc.toString() ?? this.stack.composeYAML;
+        },
+
         saveStack() {
             if (!this.canSaveStack) {
                 return;
@@ -936,11 +928,12 @@ export default {
 
             this.processing = true;
 
-            this.$root.emitAgent(this.stack.endpoint, "saveStack", this.stack.name, this.stack.composeYAML, this.stack.composeENV, this.isAdd, (res) => {
+            this.$root.emitAgent(this.stack.endpoint, "saveStack", this.stack.name, this.composeEditorContent(), this.stack.composeENV, this.isAdd, (res) => {
                 this.processing = false;
                 this.$root.toastRes(res);
 
                 if (res.ok) {
+                    this.stack.name = res.name;
                     this.isEditMode = false;
                     this.$router.push(this.url);
                 }
@@ -1031,40 +1024,27 @@ export default {
             this.isEditMode = false;
         },
 
-        yamlToJSON(yaml) {
-            let doc = parseDocument(yaml);
+        yamlToJSON(yamlText) {
+            const doc = parseDocument(yamlText);
             if (doc.errors.length > 0) {
                 throw doc.errors[0];
             }
 
             const config = doc.toJS() ?? {};
-
-            // Check data types
-            // "services" must be an object
-            if (!config.services) {
-                config.services = {};
-            }
-
-            if (Array.isArray(config.services) || typeof config.services !== "object") {
+            if (config.services != null && (Array.isArray(config.services) || typeof config.services !== "object")) {
                 throw new Error("Services must be an object");
             }
 
-            return {
-                config,
-                doc,
-            };
+            return config;
         },
 
         yamlCodeChange() {
             try {
-                let { config, doc } = this.yamlToJSON(this.stack.composeYAML);
+                // Parsed data drives previews only; never serialize it into the editor.
+                this.jsonConfig = this.yamlToJSON(this.stack.composeYAML);
 
-                this.yamlDoc = doc;
-                this.jsonConfig = config;
-
-                let env = dotenv.parse(this.stack.composeENV);
-                let envYAML = envsubstYAML(this.stack.composeYAML, env);
-                this.envsubstJSONConfig = this.yamlToJSON(envYAML).config;
+                const env = dotenv.parse(this.stack.composeENV);
+                this.envsubstJSONConfig = envsubstYAML(this.stack.composeYAML, env);
 
                 clearTimeout(yamlErrorTimeout);
                 this.yamlError = "";
@@ -1272,6 +1252,7 @@ export default {
 .editor-filename {
     overflow: hidden;
     min-width: 0;
+    margin-right: auto;
     font-family: inherit;
     font-size: 0.85rem;
     font-weight: 500;
@@ -1394,6 +1375,15 @@ export default {
             color: $dark-font-color2;
         }
     }
+}
+
+.project-status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    vertical-align: 0.12em;
+    cursor: help;
 }
 
 .project-header {

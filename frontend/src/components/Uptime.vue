@@ -1,9 +1,9 @@
 <template>
-    <span :class="className">{{ statusName }}</span>
+    <span :class="className" :title="stackStatusLabel(stack)">{{ statusName }}</span>
 </template>
 
 <script>
-import { statusColor, statusNameShort } from "../../../common/util-common";
+import { stackStatusLabel, statusColor, statusNameShort } from "../../../common/util-common";
 
 export default {
     props: {
@@ -27,7 +27,8 @@ export default {
         },
 
         statusName() {
-            return this.$t(statusNameShort(this.stack?.status));
+            const name = statusNameShort(this.stack?.status);
+            return this.$te(name) ? this.$t(name) : name;
         },
 
         className() {
@@ -38,6 +39,9 @@ export default {
             }
             return className;
         },
+    },
+    methods: {
+        stackStatusLabel,
     },
 };
 </script>
