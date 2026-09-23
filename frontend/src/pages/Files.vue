@@ -102,11 +102,14 @@
                                 >
                                     <font-awesome-icon icon="file-pen" />
                                 </button>
-                                <BDropdown right text="" size="sm" variant="normal">
-                                    <BDropdownItem @click="openRename(entry)">{{ $t("rename") }}</BDropdownItem>
-                                    <BDropdownItem @click="openMove(entry)">{{ $t("move") }}</BDropdownItem>
-                                    <BDropdownItem @click="openDelete(entry)">{{ $t("Delete") }}</BDropdownItem>
-                                </BDropdown>
+                                <FloatingMenu placement="bottom-end" class="file-card-menu">
+                                    <template #trigger="{ triggerAttrs }">
+                                        <button v-bind="triggerAttrs" class="btn btn-sm btn-normal" type="button" :aria-label="$t('actions')"><font-awesome-icon icon="ellipsis" /></button>
+                                    </template>
+                                    <button class="floating-menu-item" type="button" role="menuitem" @click="openRename(entry)">{{ $t("rename") }}</button>
+                                    <button class="floating-menu-item" type="button" role="menuitem" @click="openMove(entry)">{{ $t("move") }}</button>
+                                    <button class="floating-menu-item text-danger" type="button" role="menuitem" @click="openDelete(entry)">{{ $t("Delete") }}</button>
+                                </FloatingMenu>
                             </div>
                         </article>
                     </div>
@@ -124,27 +127,36 @@
                 </div>
             </template>
 
-            <BModal v-model="showCreate" :title="createType === 'directory' ? $t('newFolder') : $t('newTextFile')" :ok-title="$t('Create')" :cancel-title="$t('cancel')" @ok="createEntry">
+            <FloatingDialog v-model="showCreate" size="sm" :title="createType === 'directory' ? $t('newFolder') : $t('newTextFile')" :ok-title="$t('Create')" :cancel-title="$t('cancel')" @ok="createEntry">
                 <label class="form-label" for="new-entry-name">{{ $t("fileName") }}</label>
                 <input id="new-entry-name" v-model="newName" class="form-control" @keyup.enter="createEntry" />
-            </BModal>
+            </FloatingDialog>
 
-            <BModal v-model="showRename" :title="$t('rename')" :ok-title="$t('rename')" :cancel-title="$t('cancel')" @ok="renameEntry">
+            <FloatingDialog v-model="showRename" size="sm" :title="$t('rename')" :ok-title="$t('rename')" :cancel-title="$t('cancel')" @ok="renameEntry">
                 <label class="form-label" for="rename-entry">{{ $t("fileName") }}</label>
                 <input id="rename-entry" v-model="renameName" class="form-control" />
-            </BModal>
+            </FloatingDialog>
 
-            <BModal v-model="showMove" :title="$t('move')" :ok-title="$t('move')" :cancel-title="$t('cancel')" @ok="moveEntry">
+            <FloatingDialog v-model="showMove" size="sm" :title="$t('move')" :ok-title="$t('move')" :cancel-title="$t('cancel')" @ok="moveEntry">
                 <label class="form-label" for="move-destination">{{ $t("destinationDirectory") }}</label>
                 <input id="move-destination" v-model="moveDestination" class="form-control" placeholder="/" />
                 <div class="form-text">{{ $t("destinationDirectoryHint") }}</div>
-            </BModal>
+            </FloatingDialog>
 
-            <BModal v-model="showDelete" :title="$t('confirmDelete')" :ok-title="$t('Delete')" ok-variant="danger" :cancel-title="$t('cancel')" @ok="deleteEntry">
+            <FloatingDialog v-model="showDelete" size="sm" :title="$t('confirmDelete')" :ok-title="$t('Delete')" ok-variant="btn-danger" :cancel-title="$t('cancel')" @ok="deleteEntry">
                 {{ $t("fileDeleteConfirm", { name: activeEntry?.name }) }}
-            </BModal>
+            </FloatingDialog>
 
-            <BModal v-model="showEditor" modal-class="file-editor-modal" :title="editor.name" size="xl" :ok-title="$t('Save')" :cancel-title="$t('cancel')" @ok="saveEditor">
+            <FloatingDialog
+                v-model="showEditor"
+                dialog-class="file-editor-dialog"
+                :title="editor.name"
+                size="xl"
+                fill
+                :ok-title="$t('Save')"
+                :cancel-title="$t('cancel')"
+                @ok="saveEditor"
+            >
                 <div class="editor-meta"><span>{{ editor.languageName }}</span><span>UTF-8</span></div>
                 <div class="text-editor">
                     <FileTextEditor
@@ -155,13 +167,14 @@
                         :dark="$root.isDark"
                     />
                 </div>
-            </BModal>
+            </FloatingDialog>
 
-            <BModal
+            <FloatingDialog
                 v-model="showLogViewer"
-                modal-class="file-log-modal"
+                dialog-class="file-log-dialog"
                 :title="$t('logViewerTitle', { name: logEntry?.name || '' })"
                 size="xl"
+                fill
                 hide-footer
                 @hidden="stopLogPolling"
             >
@@ -192,13 +205,13 @@
                         @selection-change="logHasSelection = $event"
                     />
                 </div>
-            </BModal>
+            </FloatingDialog>
         </div>
     </transition>
 </template>
 
 <script>
-import { BDropdown, BDropdownItem, BModal } from "bootstrap-vue-next";
+import { FloatingDialog, FloatingMenu } from "../components/floating";
 import { LanguageDescription } from "@codemirror/language";
 import { languages } from "@codemirror/language-data";
 import { markRaw } from "vue";
@@ -214,9 +227,8 @@ function getRouteDirectory(value) {
 }
 
 export default {
-    components: { BDropdown,
-        BDropdownItem,
-        BModal,
+    components: { FloatingDialog,
+        FloatingMenu,
         FileLogViewer,
         FileTextEditor },
     data() {
@@ -817,16 +829,8 @@ export default {
 .log-viewer-toolbar .active { color: #fff; background: $primary; }
 .log-viewer-status { align-self: center; color: $dark-font-color3; }
 .log-viewer-body { display: flex; overflow: hidden; flex: 1 1 auto; min-height: 0; border: 1px solid rgba(127,127,127,.3); border-radius: 0.4rem; font-family: 'JetBrains Mono', monospace; font-size: 14px; }
-:global(.file-editor-modal) { overflow: hidden; }
-:global(.file-editor-modal .modal-dialog) { height: calc(100dvh - 3.5rem); }
-:global(.file-editor-modal .modal-content) { height: 100%; max-height: calc(100dvh - 3.5rem); border-radius: 0.5rem; }
-:global(.file-editor-modal .modal-header), :global(.file-editor-modal .modal-footer) { flex: 0 0 auto; }
-:global(.file-editor-modal .modal-body) { display: flex; overflow: hidden; flex: 1 1 auto; flex-direction: column; min-height: 0; }
-:global(.file-log-modal) { overflow: hidden; }
-:global(.file-log-modal .modal-dialog) { height: calc(100dvh - 3.5rem); }
-:global(.file-log-modal .modal-content) { height: 100%; max-height: calc(100dvh - 3.5rem); border-radius: 0.5rem; }
-:global(.file-log-modal .modal-header) { flex: 0 0 auto; }
-:global(.file-log-modal .modal-body) { display: flex; overflow: hidden; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+:global(.file-editor-dialog .fd-body),
+:global(.file-log-dialog .fd-body) { display: flex; overflow: hidden; flex: 1 1 auto; flex-direction: column; min-height: 0; }
 
 .files-page {
     .dark & .text-muted {
@@ -865,10 +869,6 @@ export default {
     .file-card-actions { display: flex; flex: 0 0 auto; gap: 0.25rem; }
     .pagination-bar { flex-wrap: wrap; }
     .transfer-panel { bottom: calc(70px + env(safe-area-inset-bottom)); }
-    :global(.file-editor-modal .modal-dialog) { width: 100%; max-width: none; height: 100dvh; margin: 0; }
-    :global(.file-editor-modal .modal-content) { height: 100dvh; max-height: 100dvh; border-radius: 0; }
-    :global(.file-log-modal .modal-dialog) { width: 100%; max-width: none; height: 100dvh; margin: 0; }
-    :global(.file-log-modal .modal-content) { height: 100dvh; max-height: 100dvh; border-radius: 0; }
     .text-editor { font-size: 16px; }
     .log-viewer-body { font-size: 16px; }
     .log-viewer-toolbar .btn { min-height: 44px; }

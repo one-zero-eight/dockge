@@ -1,13 +1,13 @@
 <template>
     <transition name="slide-fade" appear>
         <div class="stack-browser">
-            <div class="d-flex align-items-center gap-3 mb-3">
+            <div class="stack-browser-heading d-flex align-items-center gap-3 mb-3">
                 <h1 class="mb-0">{{ $t("stacks") }}</h1>
                 <router-link to="/compose" class="btn btn-primary btn-sm add-stack" :aria-label="$t('compose')" :title="$t('compose')">
                     <font-awesome-icon icon="plus" />
                 </router-link>
             </div>
-            <StackList />
+            <StackList :scrollbar="true" />
         </div>
     </transition>
 </template>
@@ -21,6 +21,20 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.stack-browser {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.stack-browser-heading {
+    flex: 0 0 auto;
+}
+
 .add-stack {
     display: inline-flex;
     align-items: center;
@@ -32,9 +46,13 @@ export default {
     border-radius: 50%;
 }
 
-.stack-browser :deep(.shadow-box) {
+.stack-browser :deep(.stack-list-box) {
+    flex: 1 1 0;
     position: static;
+    width: 100%;
     height: auto;
-    min-height: calc(100dvh - 190px);
+    max-height: none;
+    min-height: 0;
+    margin-bottom: 0;
 }
 </style>

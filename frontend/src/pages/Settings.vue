@@ -7,6 +7,16 @@
         <div class="shadow-box shadow-box-settings">
             <div class="row">
                 <div v-if="showSubMenu" class="settings-menu col-lg-3 col-md-5">
+                    <div v-if="$root.isCompact" class="account-block mb-2">
+                        <div class="profile-pic">{{ $root.usernameFirstChar }}</div>
+                        <div class="account-text">
+                            <i18n-t v-if="$root.username != null" tag="span" keypath="signedInDisp">
+                                <strong>{{ $root.username }}</strong>
+                            </i18n-t>
+                            <span v-else>{{ $t("signedInDispDisabled") }}</span>
+                        </div>
+                    </div>
+
                     <router-link
                         v-for="(item, key) in subMenus"
                         :key="key"
@@ -17,13 +27,20 @@
                         </div>
                     </router-link>
 
-                    <!-- Logout Button -->
-                    <a v-if="$root.isMobile && $root.loggedIn && $root.socketIO.token !== 'autoLogin'" class="logout" @click.prevent="$root.logout">
-                        <div class="menu-item">
-                            <font-awesome-icon icon="sign-out-alt" />
-                            {{ $t("Logout") }}
-                        </div>
-                    </a>
+                    <button v-if="$root.isCompact && $root.loggedIn" type="button" class="menu-action" @click="scanFolder">
+                        <font-awesome-icon icon="arrows-rotate" />
+                        {{ $t("scanFolder") }}
+                    </button>
+
+                    <button
+                        v-if="$root.isCompact && $root.loggedIn && $root.socketIO.token !== 'autoLogin'"
+                        type="button"
+                        class="menu-action logout"
+                        @click="$root.logout"
+                    >
+                        <font-awesome-icon icon="sign-out-alt" />
+                        {{ $t("Logout") }}
+                    </button>
                 </div>
                 <div class="settings-content col-lg-9 col-md-7">
                     <div v-if="currentPage" class="settings-content-header">
@@ -45,6 +62,7 @@
 
 <script>
 import { useRoute } from "vue-router";
+import { ALL_ENDPOINTS } from "../../../common/util-common";
 
 export default {
     data() {
@@ -171,6 +189,12 @@ export default {
                 msg: "",
             };
         },
+
+        scanFolder() {
+            this.$root.emitAgent(ALL_ENDPOINTS, "requestStackList", (res) => {
+                this.$root.toastRes(res);
+            });
+        },
     }
 };
 </script>
@@ -180,7 +204,6 @@ export default {
 
 .shadow-box-settings {
     padding: 20px;
-    min-height: calc(100vh - 155px);
 }
 
 footer {
@@ -196,16 +219,52 @@ footer {
         text-decoration: none !important;
     }
 
-    .menu-item {
+    .account-block {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0.5em;
+        padding: 0.7em 1em;
+    }
+
+    .profile-pic {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: $primary-gradient;
+        color: $dark-font-color2;
+        font-weight: 700;
+        flex: 0 0 auto;
+    }
+
+    .account-text {
+        min-width: 0;
+        font-size: 0.95rem;
+    }
+
+    .menu-item,
+    .menu-action {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        width: calc(100% - 1em);
+        border: 0;
         border-radius: 10px;
         margin: 0.5em;
         padding: 0.7em 1em;
+        background: transparent;
+        color: inherit;
+        text-align: left;
         cursor: pointer;
         border-left-width: 0;
         transition: all ease-in-out 0.1s;
     }
 
-    .menu-item:hover {
+    .menu-item:hover,
+    .menu-action:hover {
         background: $highlight-white;
 
         .dark & {
@@ -256,7 +315,6 @@ footer {
 
 @media (max-width: 767.98px) {
     .shadow-box-settings {
-        min-height: calc(100dvh - 170px);
         padding: 12px;
     }
 

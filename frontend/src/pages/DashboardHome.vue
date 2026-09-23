@@ -59,19 +59,34 @@
                             <font-awesome-icon v-if="agentItem.name !== ''" icon="pen-to-square" @click="showEditAgentNameDialog[agentItem.name] = !showEditAgentNameDialog[agentItem.Name]" />
 
                             <!-- Edit Dialog -->
-                            <BModal v-model="showEditAgentNameDialog[agentItem.name]" :no-close-on-backdrop="true" :close-on-esc="true" :okTitle="$t('Update Name')" okVariant="info" @ok="updateName(agentItem.url, agentItem.updatedName)">
+                            <FloatingDialog
+                                v-model="showEditAgentNameDialog[agentItem.name]"
+                                size="sm"
+                                no-close-on-backdrop
+                                :title="$t('Update Name')"
+                                :ok-title="$t('Update Name')"
+                                ok-variant="btn-info"
+                                @ok="updateName(agentItem.url, agentItem.updatedName)"
+                            >
                                 <label for="Update Name" class="form-label">Current value: {{ $t(agentItem.name) }}</label>
                                 <input id="updatedName" v-model="agentItem.updatedName" type="text" class="form-control" optional>
-                            </BModal>
+                            </FloatingDialog>
 
                             <!-- Remove Button -->
                             <font-awesome-icon v-if="endpoint !== ''" class="ms-2 remove-agent" icon="trash" @click="showRemoveAgentDialog[agentItem.url] = !showRemoveAgentDialog[agentItem.url]" />
 
                             <!-- Remove Agent Dialog -->
-                            <BModal v-model="showRemoveAgentDialog[agentItem.url]" :okTitle="$t('removeAgent')" okVariant="danger" @ok="removeAgent(agentItem.url)">
+                            <FloatingDialog
+                                v-model="showRemoveAgentDialog[agentItem.url]"
+                                size="sm"
+                                :title="$t('removeAgent')"
+                                :ok-title="$t('removeAgent')"
+                                ok-variant="btn-danger"
+                                @ok="removeAgent(agentItem.url)"
+                            >
                                 <p>{{ agentItem.url }}</p>
                                 {{ $t("removeAgentMsg") }}
-                            </BModal>
+                            </FloatingDialog>
                         </div>
 
                         <button v-if="!showAgentForm" class="btn btn-normal" @click="showAgentForm = !showAgentForm">{{ $t("addAgent") }}</button>
@@ -113,10 +128,11 @@
 
 <script>
 import { statusNameShort } from "../../../common/util-common";
+import { FloatingDialog } from "../components/floating";
 
 export default {
     components: {
-
+        FloatingDialog,
     },
     props: {
         calculatedHeight: {

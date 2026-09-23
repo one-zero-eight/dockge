@@ -39,6 +39,8 @@ import {
     faLink,
     faChevronDown,
     faChevronUp,
+    faChevronLeft,
+    faChevronRight,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -69,6 +71,7 @@ import {
     faLayerGroup,
     faCubes,
     faCube,
+    faEllipsis,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -104,6 +107,8 @@ library.add(
     faLink,
     faChevronDown,
     faChevronUp,
+    faChevronLeft,
+    faChevronRight,
     faSignOutAlt,
     faPen,
     faExternalLinkSquareAlt,
@@ -139,6 +144,7 @@ library.add(
     faLayerGroup,
     faCubes,
     faCube,
+    faEllipsis,
 );
 
 export { FontAwesomeIcon };

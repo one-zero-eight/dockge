@@ -1,33 +1,26 @@
 <template>
-    <div ref="modal" class="modal fade" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 id="exampleModalLabel" class="modal-title">
-                        {{ title || $t("Confirm") }}
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" />
-                </div>
-                <div class="modal-body">
-                    <slot />
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn" :class="btnStyle" data-bs-dismiss="modal" @click="yes">
-                        {{ yesText }}
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="no">
-                        {{ noText }}
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <FloatingDialog
+        v-model="visible"
+        size="sm"
+        :title="title || $t('Confirm')"
+        :ok-title="yesText"
+        :cancel-title="noText"
+        :ok-variant="btnStyle"
+        cancel-variant="btn-secondary"
+        @ok="yes"
+        @cancel="no"
+    >
+        <slot />
+    </FloatingDialog>
 </template>
 
 <script>
-import { Modal } from "bootstrap";
+import FloatingDialog from "./floating/FloatingDialog.vue";
 
 export default {
+    components: {
+        FloatingDialog,
+    },
     props: {
         /** Style of button */
         btnStyle: {
@@ -44,18 +37,17 @@ export default {
             type: String,
             default: "No",
         },
-        /** Title to show on modal. Defaults to translated version of "Config" */
+        /** Title to show on modal. Defaults to translated version of "Confirm" */
         title: {
             type: String,
             default: null,
-        }
+        },
     },
     emits: [ "yes", "no" ],
-    data: () => ({
-        modal: null,
-    }),
-    mounted() {
-        this.modal = new Modal(this.$refs.modal);
+    data() {
+        return {
+            visible: false,
+        };
     },
     methods: {
         /**
@@ -63,22 +55,26 @@ export default {
          * @returns {void}
          */
         show() {
-            this.modal.show();
+            this.visible = true;
         },
         /**
-         * @fires string "yes" Notify the parent when Yes is pressed
+         * Notify the parent when Yes is pressed
+         * @fires string "yes"
          * @returns {void}
          */
         yes() {
+            this.visible = false;
             this.$emit("yes");
         },
         /**
-         * @fires string "no" Notify the parent when No is pressed
+         * Notify the parent when No is pressed
+         * @fires string "no"
          * @returns {void}
          */
         no() {
+            this.visible = false;
             this.$emit("no");
-        }
+        },
     },
 };
 </script>

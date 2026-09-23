@@ -402,11 +402,13 @@ export default defineComponent({
 
         },
 
-        bindTerminal(endpoint : string, terminalName : string, terminal : Terminal, callback? : () => void) {
+        bindTerminal(endpoint : string, terminalName : string, terminal : Terminal, callback? : () => void, options? : { skipBuffer?: boolean }) {
             // Load terminal, get terminal screen
             this.emitAgent(endpoint, "terminalJoin", terminalName, (res) => {
                 if (res.ok) {
-                    terminal.write(res.buffer);
+                    if (!options?.skipBuffer && res.buffer) {
+                        terminal.write(res.buffer);
+                    }
                     terminalMap.set(terminalName, terminal);
                     callback?.();
                 } else {

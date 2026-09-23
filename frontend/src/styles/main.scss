@@ -1,6 +1,5 @@
 @import "vars.scss";
 @import "bootstrap/scss/bootstrap";
-@import "bootstrap-vue-next/dist/bootstrap-vue-next.css";
 
 #app {
     font-family: BlinkMacSystemFont, segoe ui, Roboto, helvetica neue, Arial, noto sans, sans-serif, apple color emoji, segoe ui emoji, segoe ui symbol, noto color emoji;
@@ -8,11 +7,37 @@
 
 html, body, #app {
     min-width: 320px;
-    min-height: 100%;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
 }
 
-body {
+#app > .app-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#app > .app-layout > .desktop-header {
+    flex: 0 0 auto;
+}
+
+#app > .app-layout > main {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
     overflow-x: hidden;
+    overflow-y: auto;
+}
+
+@media (max-width: 991.98px) {
+    #app > .app-layout > main {
+        padding: 12px 12px calc(76px + env(safe-area-inset-bottom));
+    }
 }
 
 h1 {
@@ -168,9 +193,17 @@ optgroup {
 
 .btn-warning {
     color: white;
+    background: $warning-gradient;
+    border-color: transparent;
 
     &:hover, &:active, &:focus, &.active {
         color: white;
+        background: $warning-gradient-active;
+        border-color: transparent;
+    }
+
+    .dark & {
+        color: $dark-font-color2;
     }
 }
 
@@ -519,12 +552,6 @@ optgroup {
         overflow-y: auto;
     }
 
-    @media (max-width: 770px) {
-        &.scrollbar {
-            height: calc(100% - 97px);
-        }
-    }
-
     .item {
         display: flex;
         align-items: center;
@@ -574,8 +601,120 @@ optgroup {
 
 .btn-success {
     color: #fff;
-    background-color: #4caf50;
-    border-color: #4caf50;
+    background: $success-gradient;
+    border-color: transparent;
+
+    &:hover,
+    &:focus,
+    &:active,
+    &.active {
+        color: #fff;
+        background: $success-gradient-active;
+        border-color: transparent;
+    }
+
+    .dark & {
+        color: $dark-font-color2;
+    }
+}
+
+.btn-danger {
+    color: #fff;
+    background: $danger-gradient;
+    border-color: transparent;
+
+    &:hover,
+    &:focus,
+    &:active,
+    &.active {
+        color: #fff;
+        background: $danger-gradient-active;
+        border-color: transparent;
+    }
+}
+
+.dark {
+    .Vue-Toastification__toast {
+        min-height: 3rem;
+        padding: 0.85rem 1rem;
+        border: 0;
+        border-radius: 10px;
+        background-color: $dark-bg;
+        color: $dark-font-color;
+        box-shadow:
+            0 0 0 1px rgba(255, 255, 255, 0.06),
+            0 12px 40px rgba(0, 0, 0, 0.55);
+        font-family: inherit;
+        font-size: 0.95rem;
+    }
+
+    .Vue-Toastification__toast--success,
+    .Vue-Toastification__toast--error,
+    .Vue-Toastification__toast--warning,
+    .Vue-Toastification__toast--info,
+    .Vue-Toastification__toast--default {
+        background-color: $dark-bg;
+        color: $dark-font-color;
+    }
+
+    .Vue-Toastification__toast-body {
+        color: $dark-font-color;
+        line-height: 1.4;
+    }
+
+    .Vue-Toastification__close-button {
+        color: $dark-font-color3;
+        opacity: 0.85;
+        text-shadow: none;
+
+        &:hover,
+        &:focus {
+            color: $dark-font-color;
+            opacity: 1;
+        }
+    }
+
+    .Vue-Toastification__progress-bar {
+        background: rgba($dark-font-color3, 0.45);
+    }
+
+    .Vue-Toastification__icon {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        width: 1.5rem;
+        height: 1.5rem;
+        margin: auto 0.85rem auto 0;
+        border-radius: 50%;
+
+        svg {
+            display: block;
+            width: 0.85rem;
+            height: 0.85rem;
+        }
+    }
+
+    .Vue-Toastification__toast--success .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $success-gradient;
+    }
+
+    .Vue-Toastification__toast--error .Vue-Toastification__icon {
+        color: #fff;
+        background: $danger-gradient;
+    }
+
+    .Vue-Toastification__toast--warning .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $warning-gradient;
+    }
+
+    .Vue-Toastification__toast--info .Vue-Toastification__icon,
+    .Vue-Toastification__toast--default .Vue-Toastification__icon {
+        color: $dark-font-color2;
+        background: $primary-gradient;
+    }
 }
 
 
