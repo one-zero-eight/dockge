@@ -53,18 +53,7 @@
             </div>
         </div>
 
-        <div v-if="isEditMode" class="mt-2">
-            <button class="btn btn-normal me-2" @click="showConfig = !showConfig">
-                <font-awesome-icon icon="edit" />
-                {{ $t("Edit") }}
-            </button>
-            <button v-if="false" class="btn btn-normal me-2">Rename</button>
-            <button class="btn btn-danger me-2" @click="remove">
-                <font-awesome-icon icon="trash" />
-                {{ $t("deleteContainer") }}
-            </button>
-        </div>
-        <div v-else-if="serviceStatus.length > 0" class="container-instances mt-3">
+        <div v-if="serviceStatus.length > 0" class="container-instances mt-3">
             <div v-for="instance in serviceStatus" :key="instance.name" class="instance-row">
                 <div class="instance-summary">
                     <div class="instance-name">{{ instance.name }}</div>
@@ -88,102 +77,6 @@
                 </div>
             </div>
         </div>
-
-        <transition name="slide-fade" appear>
-            <div v-if="isEditMode && showConfig" class="config mt-3">
-                <!-- Image -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dockerImage") }}
-                    </label>
-                    <div class="input-group mb-3">
-                        <input
-                            v-model="service.image"
-                            class="form-control"
-                            list="image-datalist"
-                        />
-                    </div>
-
-                    <!-- TODO: Search online: https://hub.docker.com/api/content/v1/products/search?q=louislam%2Fuptime&source=community&page=1&page_size=4 -->
-                    <datalist id="image-datalist">
-                        <option value="louislam/uptime-kuma:1" />
-                    </datalist>
-                    <div class="form-text"></div>
-                </div>
-
-                <!-- Ports -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("port", 2) }}
-                    </label>
-                    <ArrayInput name="ports" :display-name="$t('port')" placeholder="HOST:CONTAINER" />
-                </div>
-
-                <!-- Volumes -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("volume", 2) }}
-                    </label>
-                    <ArrayInput name="volumes" :display-name="$t('volume')" placeholder="HOST:CONTAINER" />
-                </div>
-
-                <!-- Restart Policy -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("restartPolicy") }}
-                    </label>
-                    <select v-model="service.restart" class="form-select">
-                        <option value="always">{{ $t("restartPolicyAlways") }}</option>
-                        <option value="unless-stopped">{{ $t("restartPolicyUnlessStopped") }}</option>
-                        <option value="on-failure">{{ $t("restartPolicyOnFailure") }}</option>
-                        <option value="no">{{ $t("restartPolicyNo") }}</option>
-                    </select>
-                </div>
-
-                <!-- Environment Variables -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("environmentVariable", 2) }}
-                    </label>
-                    <ArrayInput name="environment" :display-name="$t('environmentVariable')" placeholder="KEY=VALUE" />
-                </div>
-
-                <!-- Container Name -->
-                <div v-if="false" class="mb-4">
-                    <label class="form-label">
-                        {{ $t("containerName") }}
-                    </label>
-                    <div class="input-group mb-3">
-                        <input
-                            v-model="service.container_name"
-                            class="form-control"
-                        />
-                    </div>
-                    <div class="form-text"></div>
-                </div>
-
-                <!-- Network -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $tc("network", 2) }}
-                    </label>
-
-                    <div v-if="networkList.length === 0 && service.networks && service.networks.length > 0" class="text-warning mb-3">
-                        {{ $t("NoNetworksAvailable") }}
-                    </div>
-
-                    <ArraySelect name="networks" :display-name="$t('network')" placeholder="Network Name" :options="networkList" />
-                </div>
-
-                <!-- Depends on -->
-                <div class="mb-4">
-                    <label class="form-label">
-                        {{ $t("dependsOn") }}
-                    </label>
-                    <ArrayInput name="depends_on" :display-name="$t('dependsOn')" :placeholder="$t(`containerName`)" />
-                </div>
-            </div>
-        </transition>
     </div>
 </template>
 
@@ -227,20 +120,7 @@ export default defineComponent({
         "stop-service",
         "restart-service"
     ],
-    data() {
-        return {
-            showConfig: false,
-        };
-    },
     computed: {
-
-        networkList() {
-            let list = [];
-            for (const networkName in (this.jsonObject.networks || {})) {
-                list.push(networkName);
-            }
-            return list;
-        },
 
         bgStyle() {
             if (this.status === "running" || this.status === "healthy") {
@@ -287,17 +167,6 @@ export default defineComponent({
             return this.$parent.$parent.stack.name;
         },
 
-        service() {
-            if (!this.jsonObject.services || !this.jsonObject.services[this.name]) {
-                return {};
-            }
-            return this.jsonObject.services[this.name];
-        },
-
-        jsonObject() {
-            return this.$parent.$parent.jsonConfig;
-        },
-
         envsubstJSONConfig() {
             return this.$parent.$parent.envsubstJSONConfig;
         },
@@ -319,11 +188,6 @@ export default defineComponent({
             return this.serviceStatus[0].status;
         }
     },
-    mounted() {
-        if (this.first) {
-            //this.showConfig = true;
-        }
-    },
     methods: {
         parsePort(port) {
             if (this.stack.endpoint) {
@@ -332,9 +196,6 @@ export default defineComponent({
                 let hostname = this.$root.info.primaryHostname || location.hostname;
                 return parseDockerPort(port, hostname);
             }
-        },
-        remove() {
-            delete this.jsonObject.services[this.name];
         },
         startService() {
             this.$emit("start-service", this.name);

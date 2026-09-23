@@ -1,7 +1,7 @@
 /*
  * Common utilities for backend and frontend
  */
-import yaml, { Document, Pair, Scalar } from "yaml";
+import yaml from "yaml";
 import { DotenvParseOutput } from "dotenv";
 
 // Init dayjs
@@ -115,6 +115,48 @@ export const acceptedComposeFileNames = [
 ];
 
 /**
+ * Validate a stacks-directory folder basename (not a Compose project name).
+ * Rejects empty values, `.` / `..`, and any path separator.
+ * @param folderName Folder basename under DOCKGE_STACKS_DIR
+ */
+export function validateStackFolderName(folderName : string) : void {
+    const name = folderName?.trim() ?? "";
+    if (!name) {
+        throw new Error("Folder name cannot be empty");
+    }
+    if (name === "." || name === "..") {
+        throw new Error("Invalid folder name");
+    }
+    if (name.includes("/") || name.includes("\\") || name.includes("\0")) {
+        throw new Error("Folder name cannot contain path separators");
+    }
+    // Must be a single path segment
+    if (name !== name.split(/[/\\]/).pop()) {
+        throw new Error("Folder name must be a single directory name");
+    }
+}
+
+/**
+ * Derive a Docker Compose project name from an arbitrary folder name.
+ * Compose requires: [a-z0-9][a-z0-9_-]*
+ * @param folderName Folder or display name
+ */
+export function toComposeProjectName(folderName : string) : string {
+    let name = folderName.trim().toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+    if (!name) {
+        name = "stack";
+    }
+    if (!/^[a-z0-9]/.test(name)) {
+        name = "p" + name;
+    }
+    return name;
+}
+
+/**
  * Generate a decimal integer number from a string
  * @param str Input
  * @param length Default is 10 which means 0 - 9
@@ -221,81 +263,6 @@ export function getContainerInstanceExecTerminalName(endpoint : string, stackNam
     return "container-instance-exec-" + endpoint + "-" + stackName + "-" + container + "-" + shell;
 }
 
-export function copyYAMLComments(doc : Document, src : Document) {
-    doc.comment = src.comment;
-    doc.commentBefore = src.commentBefore;
-
-    if (doc && doc.contents && src && src.contents) {
-        // @ts-ignore
-        copyYAMLCommentsItems(doc.contents.items, src.contents.items);
-    }
-}
-
-/**
- * Copy yaml comments from srcItems to items
- * Attempts to preserve comments by matching content rather than just array indices
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function copyYAMLCommentsItems(items: any, srcItems: any) {
-    if (!items || !srcItems) {
-        return;
-    }
-
-    // First pass - try to match items by their content
-    for (let i = 0; i < items.length; i++) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const item: any = items[i];
-
-        // Try to find matching source item by content
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const srcIndex = srcItems.findIndex((srcItem: any) =>
-            JSON.stringify(srcItem.value) === JSON.stringify(item.value) &&
-            JSON.stringify(srcItem.key) === JSON.stringify(item.key)
-        );
-
-        if (srcIndex !== -1) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const srcItem: any = srcItems[srcIndex];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const nextSrcItem: any = srcItems[srcIndex + 1];
-
-            if (item.key && srcItem.key) {
-                item.key.comment = srcItem.key.comment;
-                item.key.commentBefore = srcItem.key.commentBefore;
-            }
-
-            if (srcItem.comment) {
-                item.comment = srcItem.comment;
-            }
-
-            // Handle comments between array items
-            if (nextSrcItem && nextSrcItem.commentBefore) {
-                if (items[i + 1]) {
-                    items[i + 1].commentBefore = nextSrcItem.commentBefore;
-                }
-            }
-
-            // Handle trailing comments after array items
-            if (srcItem.value && srcItem.value.comment) {
-                if (item.value) {
-                    item.value.comment = srcItem.value.comment;
-                }
-            }
-
-            if (item.value && srcItem.value) {
-                if (typeof item.value === "object" && typeof srcItem.value === "object") {
-                    item.value.comment = srcItem.value.comment;
-                    item.value.commentBefore = srcItem.value.commentBefore;
-
-                    if (item.value.items && srcItem.value.items) {
-                        copyYAMLCommentsItems(item.value.items, srcItem.value.items);
-                    }
-                }
-            }
-        }
-    }
-}
-
 /**
  * Possible Inputs:
  * ports:
@@ -392,46 +359,37 @@ export function envsubst(string : string, variables : LooseObject) : string {
 }
 
 /**
- * Traverse all values in the yaml and for each value, if there are template variables, replace it environment variables
- * Emulates the behavior of how docker-compose handles environment variables in yaml files
+ * Traverse all values in the YAML and, for each string value, replace template variables with environment variables.
+ * Emulates the behavior of how docker-compose handles environment variables in yaml files.
  * @param content Yaml string
  * @param env Environment variables
- * @returns string Yaml string with environment variables replaced
+ * @returns Parsed config with environment variables replaced
  */
-export function envsubstYAML(content : string, env : DotenvParseOutput) : string {
-    const doc = yaml.parseDocument(content);
-    if (doc.contents) {
-        // @ts-ignore
-        for (const item of doc.contents.items) {
-            traverseYAML(item, env);
-        }
-    }
-    return doc.toString();
+export function envsubstYAML(content : string, env : DotenvParseOutput) : LooseObject {
+    return envsubstObject(yaml.parse(content) ?? {}, env) as LooseObject;
 }
 
 /**
  * Used for envsubstYAML(...)
- * @param pair
+ * @param obj
  * @param env
  */
-function traverseYAML(pair : Pair, env : DotenvParseOutput) : void {
-    // @ts-ignore
-    if (pair.value && pair.value.items) {
-        // @ts-ignore
-        for (const item of pair.value.items) {
-            if (item instanceof Pair) {
-                traverseYAML(item, env);
-            } else if (item instanceof Scalar) {
-                let value = item.value as unknown;
-
-                if (typeof(value) === "string") {
-                    item.value = envsubst(value, env);
-                }
-            }
-        }
-    // @ts-ignore
-    } else if (pair.value && typeof(pair.value.value) === "string") {
-        // @ts-ignore
-        pair.value.value = envsubst(pair.value.value, env);
+function envsubstObject(obj : unknown, env : DotenvParseOutput) : unknown {
+    if (typeof obj === "string") {
+        return envsubst(obj, env);
     }
+
+    if (Array.isArray(obj)) {
+        return obj.map((item) => envsubstObject(item, env));
+    }
+
+    if (obj && typeof obj === "object") {
+        const result : LooseObject = {};
+        for (const key in obj) {
+            result[key] = envsubstObject((obj as LooseObject)[key], env);
+        }
+        return result;
+    }
+
+    return obj;
 }

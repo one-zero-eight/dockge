@@ -180,7 +180,6 @@ export default {
 
 .shadow-box-settings {
     padding: 20px;
-    min-height: calc(100vh - 155px);
 }
 
 footer {
@@ -256,7 +255,6 @@ footer {
 
 @media (max-width: 767.98px) {
     .shadow-box-settings {
-        min-height: calc(100dvh - 170px);
         padding: 12px;
     }
 

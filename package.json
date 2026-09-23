@@ -47,7 +47,6 @@
         "jwt-decode": "~3.1.2",
         "knex": "~2.5.1",
         "limiter-es6-compat": "~2.1.2",
-        "mysql2": "~3.12.0",
         "promisify-child-process": "~4.1.2",
         "redbean-node": "~0.3.3",
         "semver": "^7.7.1",
@@ -65,7 +64,6 @@
         "@codemirror/lang-yaml": "^6.1.2",
         "@fontsource/jetbrains-mono": "^5.2.5",
         "@fortawesome/fontawesome-svg-core": "6.4.2",
-        "@fortawesome/free-regular-svg-icons": "6.4.2",
         "@fortawesome/free-solid-svg-icons": "6.4.2",
         "@fortawesome/vue-fontawesome": "3.0.3",
         "@types/bcryptjs": "^2.4.6",
@@ -85,7 +83,6 @@
         "concurrently": "^8.2.2",
         "cross-env": "~7.0.3",
         "eslint": "~8.50.0",
-        "eslint-plugin-jsdoc": "~46.8.2",
         "eslint-plugin-vue": "~9.32.0",
         "sass": "~1.68.0",
         "thememirror": "^2.0.1",
@@ -100,7 +97,6 @@
         "vue-qrcode": "~2.2.2",
         "vue-router": "~4.5.0",
         "vue-toastification": "2.0.0-rc.5",
-        "wait-on": "^7.2.0",
-        "xterm-addon-web-links": "~0.9.0"
+        "wait-on": "^7.2.0"
     }
 }

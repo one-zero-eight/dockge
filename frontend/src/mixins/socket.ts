@@ -158,7 +158,7 @@ export default defineComponent({
             let url : string;
             const env = process.env.NODE_ENV || "production";
             if (env === "development" || localStorage.dev === "dev") {
-                url = location.protocol + "//" + location.hostname + ":5001";
+                url = location.protocol + "//" + location.hostname + ":" + (import.meta.env.VITE_BACKEND_PORT || "5001");
             } else {
                 url = location.protocol + "//" + location.host;
             }

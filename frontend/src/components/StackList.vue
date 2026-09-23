@@ -117,16 +117,14 @@ export default {
          * @returns {object} Style for stack list
          */
         boxStyle() {
-            if (window.innerWidth > 550) {
-                return {
-                    height: `calc(100vh - 160px + ${this.windowTop}px)`,
-                };
-            } else {
-                return {
-                    height: "calc(100vh - 160px)",
-                };
+            // Fixed height only on desktop sidebar; compact layout scrolls in <main>.
+            if (window.innerWidth < 992) {
+                return {};
             }
 
+            return {
+                height: `calc(100dvh - 160px + ${this.windowTop}px)`,
+            };
         },
 
         /**
@@ -391,9 +389,11 @@ export default {
 @import "../styles/vars.scss";
 
 .shadow-box {
-    height: calc(100vh - 150px);
-    position: sticky;
-    top: 10px;
+    @media (min-width: 992px) {
+        height: calc(100dvh - 150px);
+        position: sticky;
+        top: 10px;
+    }
 }
 
 .small-padding {

@@ -21,7 +21,7 @@ export default {
 <style scoped lang="scss">
 .stack-browser :deep(.shadow-box) {
     position: static;
-    height: auto;
-    min-height: calc(100dvh - 190px);
+    height: auto !important;
+    min-height: 0;
 }
 </style>

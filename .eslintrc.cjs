@@ -14,8 +14,7 @@ module.exports = {
         "parser": "@typescript-eslint/parser",
     },
     plugins: [
-        "@typescript-eslint",
-        "jsdoc"
+        "@typescript-eslint"
     ],
     rules: {
         "yoda": "error",

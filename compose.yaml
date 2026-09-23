@@ -16,6 +16,8 @@ services:
       # ⚠️ READ IT CAREFULLY. If you did it wrong, your data could end up writing into a WRONG PATH.
       # ⚠️ 1. FULL path only. No relative path (MUST)
       # ⚠️ 2. Left Stacks Path === Right Stacks Path (MUST)
+      # Host≡container is still required for relative bind mounts in compose files.
+      # (--project-directory does not remove this; host-path mapping is not implemented yet.)
       - /opt/stacks:/opt/stacks
       # Optional restricted file-manager directory. The host directory can be different,
       # but it must be explicitly mounted into the container.

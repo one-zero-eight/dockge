@@ -105,11 +105,14 @@
                     <div v-if="isAdd">
                         <h4 class="mb-3">{{ $t("general") }}</h4>
                         <div class="shadow-box big-padding mb-3">
-                            <!-- Stack Name -->
+                            <!-- Project folder -->
                             <div>
-                                <label for="name" class="form-label">{{ $t("stackName") }}</label>
-                                <input id="name" v-model="stack.name" type="text" class="form-control" required @blur="stackNameToLowercase">
-                                <div class="form-text">{{ $t("Lowercase only") }}</div>
+                                <label for="name" class="form-label">{{ $t("projectFolder") }}</label>
+                                <input id="name" v-model="stack.name" type="text" class="form-control" required>
+                                <div class="form-text">
+                                    {{ $t("projectFolderHelp") }}
+                                    <span v-if="derivedComposeProjectName">{{ $t("composeProjectNameHint", [ derivedComposeProjectName ]) }}</span>
+                                </div>
                             </div>
 
                             <!-- Endpoint -->
@@ -127,18 +130,6 @@
                     <!-- Containers -->
                     <h4 class="mb-3">{{ $tc("container", 2) }}</h4>
 
-                    <div v-if="isEditMode" class="input-group mb-3">
-                        <input
-                            v-model="newContainerName"
-                            :placeholder="$t(`New Container Name...`)"
-                            class="form-control"
-                            @keyup.enter="addContainer"
-                        />
-                        <button class="btn btn-primary" @click="addContainer">
-                            {{ $t("addContainer") }}
-                        </button>
-                    </div>
-
                     <div ref="containerList" class="container-list">
                         <Container
                             v-for="name in displayServiceNames"
@@ -153,22 +144,6 @@
                             @stop-service="stopService"
                             @restart-service="restartService"
                         />
-                    </div>
-
-                    <button v-if="false && isEditMode && jsonConfig.services && Object.keys(jsonConfig.services).length > 0" class="btn btn-normal mb-3" @click="addContainer">{{ $t("addContainer") }}</button>
-
-                    <!-- General -->
-                    <div v-if="isEditMode">
-                        <h4 class="mb-3">{{ $t("extra") }}</h4>
-                        <div class="shadow-box big-padding mb-3">
-                            <!-- URLs -->
-                            <div class="mb-4">
-                                <label class="form-label">
-                                    {{ $tc("url", 2) }}
-                                </label>
-                                <ArrayInput name="urls" :display-name="$t('url')" placeholder="https://" object-type="x-dockge" />
-                            </div>
-                        </div>
                     </div>
                 </div>
                 <div v-show="!$root.isCompact || compactTab !== 'containers'" class="col-lg-6 compose-column">
@@ -212,21 +187,6 @@
                         </div>
                     </div>
 
-                    <div v-if="isEditMode" v-show="!$root.isCompact || compactTab === 'environment'">
-                        <!-- Volumes -->
-                        <div v-if="false">
-                            <h4 class="mb-3">{{ $tc("volume", 2) }}</h4>
-                            <div class="shadow-box big-padding mb-3">
-                            </div>
-                        </div>
-
-                        <!-- Networks -->
-                        <h4 class="mb-3">{{ $tc("network", 2) }}</h4>
-                        <div class="shadow-box big-padding mb-3">
-                            <NetworkInput />
-                        </div>
-                    </div>
-
                     <!-- <div class="shadow-box big-padding mb-3">
                         <div class="mb-3">
                             <label for="name" class="form-label"> Search Templates</label>
@@ -256,17 +216,17 @@ import { yaml } from "@codemirror/lang-yaml";
 import { python } from "@codemirror/lang-python";
 import { dracula as editorTheme } from "thememirror";
 import { lineNumbers, EditorView } from "@codemirror/view";
-import { parseDocument, Document } from "yaml";
+import { parseDocument } from "yaml";
 
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import {
-    copyYAMLComments, envsubstYAML,
+    envsubstYAML,
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
-    RUNNING
+    RUNNING,
+    toComposeProjectName,
 } from "../../../common/util-common";
 import { BModal } from "bootstrap-vue-next";
-import NetworkInput from "../components/NetworkInput.vue";
 import dotenv from "dotenv";
 import { ref } from "vue";
 
@@ -287,7 +247,6 @@ let dockerStatsTimeout = null;
 
 export default {
     components: {
-        NetworkInput,
         FontAwesomeIcon,
         CodeMirror,
         BModal,
@@ -324,7 +283,6 @@ export default {
             extensionsEnv,
             editorFocus };
     },
-    yamlDoc: null,  // For keeping the yaml comments
     data() {
         return {
             jsonConfig: {},
@@ -341,7 +299,6 @@ export default {
             isEditMode: false,
             submitted: false,
             showDeleteDialog: false,
-            newContainerName: "",
             compactTab: "containers",
             stopServiceStatusTimeout: false,
             stopDockerStatsTimeout: false,
@@ -418,10 +375,6 @@ export default {
             return getComposeTerminalName(this.endpoint, this.stack.name);
         },
 
-        networks() {
-            return this.jsonConfig.networks;
-        },
-
         endpoint() {
             return this.stack.endpoint || this.$route.params.endpoint || "";
         },
@@ -442,6 +395,13 @@ export default {
                 "--compose-page-height": `${this.availablePageHeight}px`,
             };
         },
+
+        derivedComposeProjectName() {
+            if (!this.isAdd || !this.stack.name) {
+                return "";
+            }
+            return toComposeProjectName(this.stack.name);
+        },
     },
     watch: {
         "stack.composeYAML": {
@@ -459,25 +419,6 @@ export default {
                 if (this.editorFocus) {
                     console.debug("env code changed");
                     this.yamlCodeChange();
-                }
-            },
-            deep: true,
-        },
-
-        jsonConfig: {
-            handler() {
-                if (!this.editorFocus) {
-                    console.debug("jsonConfig changed");
-
-                    let doc = new Document(this.jsonConfig);
-
-                    // Stick back the yaml comments
-                    if (this.yamlDoc) {
-                        copyYAMLComments(doc, this.yamlDoc);
-                    }
-
-                    this.stack.composeYAML = doc.toString();
-                    this.yamlDoc = doc;
                 }
             },
             deep: true,
@@ -632,7 +573,7 @@ export default {
         deployStack() {
             this.processing = true;
 
-            if (!this.jsonConfig.services) {
+            if (!this.jsonConfig.services || Object.keys(this.jsonConfig.services).length === 0) {
                 this.$root.toastError("No services found in compose.yaml");
                 this.processing = false;
                 return;
@@ -666,6 +607,9 @@ export default {
                 this.$root.toastRes(res);
 
                 if (res.ok) {
+                    if (res.name) {
+                        this.stack.name = res.name;
+                    }
                     this.isEditMode = false;
                     this.$router.push(this.url);
                 }
@@ -680,6 +624,9 @@ export default {
                 this.$root.toastRes(res);
 
                 if (res.ok) {
+                    if (res.name) {
+                        this.stack.name = res.name;
+                    }
                     this.isEditMode = false;
                     this.$router.push(this.url);
                 }
@@ -745,40 +692,43 @@ export default {
             this.isEditMode = false;
         },
 
-        yamlToJSON(yaml) {
-            let doc = parseDocument(yaml);
+        yamlToJSON(yamlText) {
+            let doc = parseDocument(yamlText);
             if (doc.errors.length > 0) {
                 throw doc.errors[0];
             }
 
-            const config = doc.toJS() ?? {};
-
-            // Check data types
-            // "services" must be an object
-            if (!config.services) {
-                config.services = {};
+            // Empty / whitespace-only compose files stay empty — do not invent `services: {}`
+            if (!yamlText || !String(yamlText).trim()) {
+                return {};
             }
 
-            if (Array.isArray(config.services) || typeof config.services !== "object") {
-                throw new Error("Services must be an object");
+            return this.normalizeConfig(doc.toJS() ?? {});
+        },
+
+        /**
+         * Ensure the parsed config is usable by the rest of the UI.
+         * Does not invent a `services` key for empty compose files (that would become
+         * `services: {}` if the config is ever serialized back to YAML).
+         * @param config
+         * @returns The same config object
+         */
+        normalizeConfig(config) {
+            if (config.services != null) {
+                if (Array.isArray(config.services) || typeof config.services !== "object") {
+                    throw new Error("Services must be an object");
+                }
             }
 
-            return {
-                config,
-                doc,
-            };
+            return config;
         },
 
         yamlCodeChange() {
             try {
-                let { config, doc } = this.yamlToJSON(this.stack.composeYAML);
-
-                this.yamlDoc = doc;
-                this.jsonConfig = config;
+                this.jsonConfig = this.yamlToJSON(this.stack.composeYAML);
 
                 let env = dotenv.parse(this.stack.composeENV);
-                let envYAML = envsubstYAML(this.stack.composeYAML, env);
-                this.envsubstJSONConfig = this.yamlToJSON(envYAML).config;
+                this.envsubstJSONConfig = this.normalizeConfig(envsubstYAML(this.stack.composeYAML, env));
 
                 clearTimeout(yamlErrorTimeout);
                 this.yamlError = "";
@@ -798,38 +748,6 @@ export default {
 
         enableEditMode() {
             this.isEditMode = true;
-        },
-
-        checkYAML() {
-
-        },
-
-        addContainer() {
-            this.checkYAML();
-
-            if (this.jsonConfig.services[this.newContainerName]) {
-                this.$root.toastError("Container name already exists");
-                return;
-            }
-
-            if (!this.newContainerName) {
-                this.$root.toastError("Container name cannot be empty");
-                return;
-            }
-
-            this.jsonConfig.services[this.newContainerName] = {
-                restart: "unless-stopped",
-            };
-            this.newContainerName = "";
-            let element = this.$refs.containerList.lastElementChild;
-            element.scrollIntoView({
-                block: "start",
-                behavior: "smooth"
-            });
-        },
-
-        stackNameToLowercase() {
-            this.stack.name = this.stack?.name?.toLowerCase();
         },
 
         startService(serviceName) {

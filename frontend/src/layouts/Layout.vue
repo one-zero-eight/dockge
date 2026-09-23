@@ -1,5 +1,5 @@
 <template>
-    <div :class="classes">
+    <div class="app-layout" :class="classes">
         <div v-if="! $root.socketIO.connected && ! $root.socketIO.firstConnect" class="lost-connection">
             <div class="container-fluid">
                 {{ $root.socketIO.connectionErrorMsg }}
@@ -241,14 +241,8 @@ export default {
     }
 }
 
-main {
-    min-height: calc(100vh - 160px);
-}
-
 .compact-header {
-    position: sticky;
     z-index: 1020;
-    top: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -269,13 +263,6 @@ main {
 
 .mobile main, .mobile .compact-header + main {
     padding-bottom: calc(76px + env(safe-area-inset-bottom));
-}
-
-@media (max-width: 991.98px) {
-    main {
-        min-height: calc(100dvh - 120px);
-        padding: 12px 12px calc(76px + env(safe-area-inset-bottom));
-    }
 }
 
 .title {
